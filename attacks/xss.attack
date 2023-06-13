@@ -1,0 +1,4 @@
+<script>alert('xss');</script>
+"><script>alert('xss');</script><foo bar="
+" onmouseover="document.location="https://github.com/contentauth/" foo="
+javascript:alert('xss');

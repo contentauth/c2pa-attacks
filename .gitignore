@@ -1,0 +1,11 @@
+/target/
+
+**/*.rs.bk
+
+.DS_Store
+.idea
+.vscode
+
+/sample_out/
+
+c2pa-attacks.code-workspace
