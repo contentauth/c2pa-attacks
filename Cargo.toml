@@ -28,10 +28,6 @@ structopt = "0.3"
 tempfile = "3.3"
 regex = "1.7.1"
 
-[dev-dependencies]
-assert_cmd = "2.0"
-predicates = "2.1"
-
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
 opt-level = 3
