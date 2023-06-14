@@ -301,9 +301,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "c2pa"
-version = "0.20.3"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcd970cf75256923e053c61db3a6d366f6b1fe5b6c50be0ee2758d1e03d64b46"
+checksum = "4768e9005421b4f649b28799e283c03c314cb5f8b7be2069bb043800300d22d5"
 dependencies = [
  "asn1-rs",
  "async-trait",
@@ -329,6 +329,7 @@ dependencies = [
  "js-sys",
  "lazy_static",
  "log",
+ "mp4",
  "multibase",
  "multihash",
  "openssl",
@@ -1272,6 +1273,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mp4"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "509348cba250e7b852a875100a2ddce7a36ee3abf881a681c756670c1774264d"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "num-rational",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "multibase"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1378,8 +1393,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
 dependencies = [
  "autocfg",
+ "num-bigint",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
