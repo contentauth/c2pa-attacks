@@ -47,7 +47,7 @@ jobs:
         ## See https://github.com/mathiasvr/command-output/issues/4.
       id: generate-changelog
       with:
-        run: git log --format="* %s" v0.0.0..HEAD | { grep -v "(IGNORE)" || :; }
+        run: echo (no-op)
 
     - name: Log version & changelog
       run: |
