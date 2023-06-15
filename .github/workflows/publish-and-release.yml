@@ -47,7 +47,7 @@ jobs:
         ## See https://github.com/mathiasvr/command-output/issues/4.
       id: generate-changelog
       with:
-        run: echo (no-op)
+        run: echo blah blah blah
 
     - name: Log version & changelog
       run: |
