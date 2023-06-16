@@ -132,7 +132,7 @@ The following table describes the command-line options.
 | `--config` | `-c` | `<config>` | Specifies a manifest definition as a JSON string. See [Providing a manifest definition on the command line](#providing-a-manifest-definition-on-the-command-line). |
 | `--manifest` | `-m` | `<manifest_file>` | Specifies a manifest file to add to an asset file. See [Adding a manifest to an asset file](#adding-a-manifest-to-an-asset-file).
 | `--parent` | `-p` | `<parent_file>` | Specifies the path to the parent file. See [Specifying a parent file](#specifying-a-parent-file). |
-| `--output` | `-o` | `<output_file>` | Specifies the path to the output file. See [Displaying manifest data](#adding-a-manifest-to-an-asset-file). |
+| `--output` | `-o` | `<output_file>` | Specifies the path and title for the output files. See [Displaying manifest data](#adding-a-manifest-to-an-asset-file). |
 | `--detailed` | `-d` | N/A | Display detailed C2PA-formatted manifest data. See [Detailed manifest report](#detailed-manifest-report). |
 | `--force` | `-f` | N/A | Force overwriting of the output file. See [Forced overwrite](#forced-overwrite). |
 | `--version` | `-V` | N/A | Display version information. |
@@ -180,15 +180,17 @@ c2pa-attacks sample/image.json -c '{"assertions": [{"label": "org.contentauth.te
 
 ### Adding a manifest to an asset file
 
-To add C2PA manifest data to a file, use the `--manifest` / `-m` option with a manifest JSON file as the option argument and the path to the asset file to be signed. Specify the output file as the argument to the `--output` / `-o` option. For example:
+To add C2PA manifest data to a file, provide the path to the asset file to be signed and use the `--manifest` / `-m` option with a manifest JSON file as the option argument. Then, use the `--output` / `-o` option to specify the desired location and name suffix for the output files. The output option is required to generate manipulated files. All of the manipulated files will be put in the same folder as the image specified in the output flag. For example, assume the following command line:
 
 ```shell
-c2pa-attacks sample/image.jpg -m sample/test.json -o signed_image.jpg -t title -a xss.attack
+c2pa-attacks sample/image.jpg -m sample/test.json -o sample_out/signed_image.jpg -t title -a xss.attack
 ```
+
+In the example above, all of the generated files will be placed in the `sample_out` directory. If the `sample_out` directory does not exist, then it will be created. The first generated file would be named, `sample_out/title_xss_0_signed_image.jpg`, as previously described. 
 
 CAUTION: If the output file is the same as the source file, the tool will overwrite the source file. 
 
-If you do not use the `--output` / `-o` option, then the tool will display the generated manifest but will not save it to a file.
+If you do not use the `--output` / `-o` option, then the tool will not generate any output.
 
 #### IMPORTANT NOTE
 
@@ -201,7 +203,7 @@ A parent file represents the state of the image before the current edits were ma
 Specify a parent file as the argument to the `--parent` / `-p` option; for example:
 
 ```shell
-c2pa-attacks sample/image.jpg -m sample/test.json -p sample/c.jpg -o signed_image.jpg -t title -a xss.attack
+c2pa-attacks sample/image.jpg -m sample/test.json -p sample/c.jpg -o sample_out/signed_image.jpg -t title -a xss.attack
 ```
 
 You can also specify a parent file in the manifest definition.
@@ -215,7 +217,7 @@ To display a detailed report describing the internal C2PA format of manifests co
 The tool will return an error if the output file already exists. Use the `--force` / `-f` option to force overwriting the output file. For example:
 
 ```shell
-c2pa-attacks sample/image.jpg -m sample/test.json -f -o signed_image.jpg
+c2pa-attacks sample/image.jpg -m sample/test.json -f -o sample_out/signed_image.jpg
 ```
 
 ## Appendix
