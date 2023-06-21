@@ -23,12 +23,13 @@ use c2pa::{
     assertions::{labels, CreativeWork, SchemaDotOrgPerson},
     Error, Manifest, ManifestStore, ManifestStoreReport,
 };
+use clap::Parser;
+
 /// Tool to display and create C2PA security testing content
 ///
 /// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg -f -t author -a ./attacks/xss.txt
 use regex::Regex;
 use serde_json::{Map, Value};
-use structopt::{clap::AppSettings, StructOpt};
 
 mod signer;
 use serde::Deserialize;
@@ -46,70 +47,64 @@ struct ManifestDef {
 }
 
 // define the command line options
-#[derive(Debug, StructOpt)]
-#[structopt(about = "Tool for creating C2PA manifests for security testing.",global_settings = &[AppSettings::ColoredHelp, AppSettings::ArgRequiredElseHelp])]
+#[derive(Parser, Debug)]
+#[command(
+    name = "c2pa-attacks",
+    about = "A tool that can create C2PA manifests for the purposes of security testing."
+)]
 struct CliArgs {
-    #[structopt(parse(from_os_str))]
-    #[structopt(
-        short = "m",
-        long = "manifest_file",
-        help = "Path to manifest definition JSON file."
-    )]
+    /// The path for the original asset image
+    #[arg(required = true)]
+    path: PathBuf,
+
+    /// Path to manifest definition JSON file
+    #[arg(short = 'm', required = true)]
     manifest_file: Option<PathBuf>,
 
-    #[structopt(parse(from_os_str))]
-    #[structopt(short = "o", long = "output", help = "Path to output file or folder.")]
+    /// Path to the output folder and base file name for the output
+    #[arg(short = 'o', required = true)]
     output: Option<PathBuf>,
 
-    #[structopt(parse(from_os_str))]
-    #[structopt(short = "p", long = "parent", help = "Path to a parent file.")]
-    parent: Option<PathBuf>,
-
-    #[structopt(
-        short = "c",
-        long = "config",
-        help = "Manifest definition passed as a JSON string."
-    )]
-    config: Option<String>,
-
-    #[structopt(
-        short = "d",
-        long = "detailed",
-        help = "Display detailed C2PA-formatted manifest data."
-    )]
-    detailed: bool,
-
-    #[structopt(
-        short = "v",
-        long = "verbose",
-        help = "Display C2PA-formatted manifest data."
-    )]
-    verbose: bool,
-
-    #[structopt(
-        short = "f",
-        long = "force",
-        help = "Force overwrite of output if it already exists."
-    )]
-    force: bool,
-
-    #[structopt(
-        short = "t",
-        long = "target",
-        help = "The target field to replace. ['author','title','format','label','vendor','person_identifier','instance_id']"
+    /// The target field to replace or indicating the use of regex mode
+    #[arg(
+        short = 't',
+        required = true,
+        value_parser = clap::builder::PossibleValuesParser::new([
+        "author",
+        "title",
+        "format",
+        "label",
+        "vendor",
+        "person_identifier",
+        "instance_id",
+        "claim_generator",
+        "regex"])
     )]
     target: Option<String>,
 
-    #[structopt(
-        short = "a",
-        long = "attack_file",
-        help = "The file containing the attack strings to use."
-    )]
+    /// The file containing the attack strings to use
+    #[arg(short = 'a', required = true)]
     attack_file: String,
 
-    /// The path to an asset to examine or embed a manifest into.
-    #[structopt(parse(from_os_str))]
-    path: PathBuf,
+    /// Path to a parent file
+    #[arg(short = 'p')]
+    parent: Option<PathBuf>,
+
+    /// Manifest definition passed as a JSON string
+    #[arg(short = 'c')]
+    config: Option<String>,
+
+    /// Display detailed C2PA-formatted manifest data
+    #[arg(short = 'd')]
+    detailed: bool,
+
+    /// Force overwriting of any pre-existing output files
+    #[arg(short = 'f')]
+    force: bool,
+
+    /// Display verbose output
+    #[arg(short = 'v')]
+    verbose: bool,
 }
 
 /**
@@ -366,7 +361,7 @@ fn create_manifest_def(
 }
 
 fn main() -> Result<()> {
-    let mut args = CliArgs::from_args();
+    let mut args = CliArgs::parse();
 
     // set RUST_LOG=debug to get detailed debug logging
     if std::env::var("RUST_LOG").is_err() {
