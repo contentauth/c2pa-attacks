@@ -38,7 +38,7 @@ The result of this command will be malicious files generated in the sample_out d
 ### Example command #2 -- Injecting into the author field using regex substitution in the JSON manifest
 
 ```shell
-/c2pa-attacks ./sample/C.jpg  -m ./sample/author_name_attack.json -a ./attacks/xss.attack -t regex -o ./sample_out/C_mod2.jpg -f 
+/c2pa-attacks ./sample/C.jpg  -m ./sample/author_name_regex.json -a ./attacks/xss.attack -t regex -o ./sample_out/C_mod2.jpg -f 
 ```
 The above command line translates to:
 
@@ -72,7 +72,7 @@ cargo install c2pa-attacks
 
 ## Testing locally in the git directory
 
-If you just want to do local testing builds, then you can specify the make command followed by your corresponding OS platform. See the Makefile for OS platform options:
+If you just want to do local testing builds, then you can specify the make command followed by your corresponding OS platform. If you are using linux or the Windows Subsystem for Linux (WSL), then you will need development utilities such as `make` and `build-essential` already installed. To build c2pa-attacks, refer to the Makefile to identify the OS platform options for your environment:
 
 ```shell
 rm -rf ./target/*
