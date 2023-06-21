@@ -175,7 +175,7 @@ To provide the [manifest definition](#manifest-definition-file) in a command lin
 For example, the following command adds a custom assertion called "org.contentauth.test".
 
 ```shell
-c2pa-attacks sample/image.json -c '{"assertions": [{"label": "org.contentauth.test", "data": {"my_key": "C2PA_ATTACK"}}]}' -t regex -a xss.attack
+c2pa-attacks sample/image.json -c '{"assertions": [{"label": "org.contentauth.test", "data": {"my_key": "C2PA_ATTACK"}}]}' -t regex -a attacks/xss.attack
 ```
 
 ### Adding a manifest to an asset file
@@ -183,7 +183,7 @@ c2pa-attacks sample/image.json -c '{"assertions": [{"label": "org.contentauth.te
 To add C2PA manifest data to a file, provide the path to the asset file to be signed and use the `--manifest` / `-m` option with a manifest JSON file as the option argument. Then, use the `--output` / `-o` option to specify the desired location and name suffix for the output files. The output option is required to generate manipulated files. All of the manipulated files will be put in the same folder as the image specified in the output flag. For example, assume the following command line:
 
 ```shell
-c2pa-attacks sample/image.jpg -m sample/test.json -o sample_out/signed_image.jpg -t title -a xss.attack
+c2pa-attacks sample/image.jpg -m sample/test.json -o sample_out/signed_image.jpg -t title -a attacks/xss.attack
 ```
 
 In the example above, all of the generated files will be placed in the `sample_out` directory. If the `sample_out` directory does not exist, then it will be created. The first generated file would be named, `sample_out/title_xss_0_signed_image.jpg`, as previously described. 
@@ -203,7 +203,7 @@ A parent file represents the state of the image before the current edits were ma
 Specify a parent file as the argument to the `--parent` / `-p` option; for example:
 
 ```shell
-c2pa-attacks sample/image.jpg -m sample/test.json -p sample/c.jpg -o sample_out/signed_image.jpg -t title -a xss.attack
+c2pa-attacks sample/image.jpg -m sample/test.json -p sample/c.jpg -o sample_out/signed_image.jpg -t title -a attacks/xss.attack
 ```
 
 You can also specify a parent file in the manifest definition.
