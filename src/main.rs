@@ -13,7 +13,9 @@
 #![doc = include_str!("../README.md")]
 /// Tool to display and create C2PA security testing content
 ///
-/// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg -f -t author -a ./attacks/xss.txt
+/// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks \
+/// ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg \
+/// -f -t author -a ./attacks/xss.txt
 ///
 use std::{
     collections::HashMap,
@@ -125,8 +127,8 @@ fn report_from_path<P: AsRef<Path>>(path: &P, is_detailed: bool) -> Result<Strin
     })
 }
 
-/// The file containing the injection attacks needs to be read line-by-line
-/// This will return an Iterator to the Reader of the lines of the file.
+// The file containing the injection attacks needs to be read line-by-line
+// This will return an Iterator to the Reader of the lines of the file.
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<Path>,
@@ -135,11 +137,11 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-/// Malicious strings may have double quotes or backslashes that need to be escaped for the JSON manifest. This function will take the injection string and escape any backslashes or double quotes that might be mistakenly interpreted by JSON.
-///
-/// A trailing backslash needs to be escaped because it may be the last character in the string causing the double quote terminating the string to be escaped. Double quotes need to be escaped because they will conflict with existing JSON double quotes.
-///
-/// This returns the injection string with the appropriate characters escaped.
+// Malicious strings may have double quotes or backslashes that need to be escaped for the JSON manifest. This function will take the injection string and escape any backslashes or double quotes that might be mistakenly interpreted by JSON.
+//
+// A trailing backslash needs to be escaped because it may be the last character in the string causing the double quote terminating the string to be escaped. Double quotes need to be escaped because they will conflict with existing JSON double quotes.
+//
+// This returns the injection string with the appropriate characters escaped.
 fn escape_malicious_string(mal_string: String) -> Result<String> {
     // First escape any ending backslashes
     // Only escape if the last backslash isn't already escaped.
@@ -204,7 +206,8 @@ fn remove_existing_assertion(
     new_json
 }
 
-/// For attack types of author or person_identifier, we will create a new malicious Creative Work assertion with the appropriate malicous fields.
+// For attack types of author or person_identifier, we will create a new malicious
+// Creative Work assertion with the appropriate malicous fields.
 fn malicious_creative_work(
     field_type: String,
     mal_string: &mut String,
@@ -235,13 +238,13 @@ fn malicious_creative_work(
     Ok(new_creative_work)
 }
 
-/// This function will create the malicious output files.
-///
-/// The output files are of the format:
-///
-/// {targeted_field}_{line_no_from_injection_file}_{original_name_of_input_file}
-///
-/// The line numbers from the injection file start at zero.
+// This function will create the malicious output files.
+//
+// The output files are of the format:
+//
+// {targeted_field}_{line_no_from_injection_file}_{original_name_of_input_file}
+//
+// The line numbers from the injection file start at zero.
 fn output_file(
     args: &mut CliArgs,
     manifest: &mut Manifest,
