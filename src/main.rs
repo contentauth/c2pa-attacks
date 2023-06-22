@@ -16,7 +16,6 @@
 /// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks \
 /// ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg \
 /// -f -t author -a ./attacks/xss.txt
-///
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File},
