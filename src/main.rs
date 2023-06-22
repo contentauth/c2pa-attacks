@@ -11,6 +11,10 @@
 // each license.
 
 #![doc = include_str!("../README.md")]
+/// Tool to display and create C2PA security testing content
+///
+/// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg -f -t author -a ./attacks/xss.txt
+///
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File},
@@ -24,10 +28,6 @@ use c2pa::{
     Error, Manifest, ManifestStore, ManifestStoreReport,
 };
 use clap::Parser;
-
-/// Tool to display and create C2PA security testing content
-///
-/// Example command: ./target/x86_64-apple-darwin/release/c2pa-attacks ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg -f -t author -a ./attacks/xss.txt
 use regex::Regex;
 use serde_json::{Map, Value};
 
