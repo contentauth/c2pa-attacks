@@ -165,6 +165,7 @@ fn escape_malicious_string(mal_string: String) -> Result<String> {
     Ok(escaped_string)
 }
 
+// Remove any pre-existing assertion of the same type as the malicious assertion.
 fn remove_existing_assertion(
     orig_json: String,
     field_type: String,
@@ -250,8 +251,8 @@ fn output_file(
     sign_config: &mut SignConfig,
     field_type: String,
     mal_string: &mut String,
-    attack_file_name: Option<&str>,
-    loop_index: i64,
+    loop_index: &mut i64,
+    testing_mode: bool,
 ) -> Result<()> {
     let mut new_creative_work: Option<CreativeWork> = None;
 
@@ -302,11 +303,15 @@ fn output_file(
             bail!("Missing extension output");
         }
 
+        let temp_path = args.attack_file.clone();
+        let attack_file_path = Path::new(&temp_path);
+        let attack_file_name = attack_file_path.file_stem().unwrap();
+
         let filename = output.file_name();
         let orig_file = filename.unwrap().to_str();
         let mut new_filename = field_type;
         new_filename.push('_');
-        new_filename.push_str(attack_file_name.unwrap());
+        new_filename.push_str(attack_file_name.to_str().unwrap());
         new_filename.push('_');
         new_filename.push_str(loop_index.to_string().as_str());
         new_filename.push('_');
@@ -318,12 +323,16 @@ fn output_file(
             println!("File to be created: {:?}", output.to_str());
         }
 
+        let signer = sign_config.signer()?;
+
+        if testing_mode {
+            return Ok(());
+        }
+
         // create any needed folders for the output path (embed should do this)
         let mut output_dir = PathBuf::from(&output);
         output_dir.pop();
         create_dir_all(&output_dir)?;
-
-        let signer = sign_config.signer()?;
 
         manifest
             .embed(args.path.clone(), output.clone(), signer.as_ref())
@@ -340,6 +349,7 @@ fn output_file(
     Ok(())
 }
 
+// Create the malicious manifest containing the chosen attack string.
 fn create_manifest_def(
     json: String,
     field_type: String,
@@ -360,6 +370,95 @@ fn create_manifest_def(
         let new_string = serde_json::to_string(&new_map).unwrap();
         Ok(serde_json::from_slice(new_string.as_bytes())?)
     }
+}
+
+// This function will create the individual malicious files (except when in test mode)
+// It is called within the loop in main which is reading each line of the malicious inputs
+fn create_file(
+    field_type: String,
+    loop_index: &mut i64,
+    mal_string: String,
+    args: &mut CliArgs,
+    testing_mode: bool,
+) -> Result<()> {
+    let mut escaped_string = mal_string.clone();
+
+    let config = args.config.clone();
+
+    // if we have a manifest config, process it
+    if args.manifest_file.is_some() || config.is_some() {
+        // read the json from file or config, and get base path if from file
+        let (json, base_path) = match args.manifest_file.as_deref() {
+            Some(manifest_path) => {
+                let base_path = manifest_path.parent();
+                (std::fs::read_to_string(manifest_path)?, base_path)
+            }
+            None => (config.unwrap_or_default(), None),
+        };
+
+        // read the signing information from the manifest definition
+        let mut sign_config = SignConfig::from_json(&json)?;
+
+        let manifest_def: ManifestDef =
+            match create_manifest_def(json, field_type.clone(), mal_string.clone(), args.verbose) {
+                Ok(_v) => {
+                    // println!("Success");
+                    _v
+                }
+                Err(e) => {
+                    println!(
+                        "Error: Skipping creating malicious file with {mal_string} due to: {e:?}"
+                    );
+                    return Err(e);
+                }
+            };
+
+        let mut manifest: Manifest = manifest_def.manifest;
+
+        // add claim_tool generator so we know this was created using this tool
+        let tool_generator = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        if manifest.claim_generator.starts_with("c2pa/") {
+            manifest.claim_generator = tool_generator // just replace the default generator
+        } else {
+            manifest.claim_generator = format!("{} {}", manifest.claim_generator, tool_generator);
+        }
+
+        if let Some(base) = base_path {
+            manifest.resources_mut().set_base_path(base);
+            sign_config.set_base_path(base);
+        }
+
+        // If we successfully have a manifest config, then proceed with creating attack files.
+        if let Some(parent_path) = args.parent.clone() {
+            manifest.set_parent(c2pa::Ingredient::from_file(parent_path)?)?;
+        }
+
+        // If the source file has a manifest store, and no parent is specified, then treat the source as a parent.
+        // note: This could be treated as an update manifest eventually since the image is the same
+        let source_ingredient = c2pa::Ingredient::from_file(&args.path)?;
+        if source_ingredient.manifest_data().is_some() && manifest.parent().is_none() {
+            manifest
+                .set_parent(source_ingredient)
+                .expect("Set_parent failed to return");
+        }
+
+        let result = output_file(
+            args,
+            &mut manifest,
+            &mut sign_config,
+            field_type,
+            &mut escaped_string,
+            loop_index,
+            testing_mode,
+        );
+        match result {
+            Ok(_v) => {
+                *loop_index += 1;
+            }
+            Err(e) => println!("Failed to process file: {e:?}"),
+        }
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -398,92 +497,16 @@ fn main() -> Result<()> {
     if let Ok(lines) = read_lines(args.attack_file.clone()) {
         // Consumes the iterator, returns an (Optional) String
         for mal_string in lines.flatten() {
-            let escaped_string = mal_string.clone();
-
-            let config = args.config.clone();
-
-            // if we have a manifest config, process it
-            if args.manifest_file.is_some() || config.is_some() {
-                // read the json from file or config, and get base path if from file
-                let (json, base_path) = match args.manifest_file.as_deref() {
-                    Some(manifest_path) => {
-                        let base_path = manifest_path.parent();
-                        (std::fs::read_to_string(manifest_path)?, base_path)
-                    }
-                    None => (config.unwrap_or_default(), None),
-                };
-
-                // read the signing information from the manifest definition
-                let mut sign_config = SignConfig::from_json(&json)?;
-
-                let manifest_def: ManifestDef = match create_manifest_def(
-                    json,
-                    field_type.clone(),
-                    mal_string.clone(),
-                    args.verbose,
-                ) {
-                    Ok(_v) => {
-                        // println!("Success");
-                        _v
-                    }
-                    Err(e) => {
-                        println!("Error: Skipping creating malicious file with {mal_string} due to: {e:?}");
-                        continue;
-                    }
-                };
-
-                let mut manifest: Manifest = manifest_def.manifest;
-
-                // add claim_tool generator so we know this was created using this tool
-                let tool_generator =
-                    format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-                if manifest.claim_generator.starts_with("c2pa/") {
-                    manifest.claim_generator = tool_generator // just replace the default generator
-                } else {
-                    manifest.claim_generator =
-                        format!("{} {}", manifest.claim_generator, tool_generator);
-                }
-
-                if let Some(base) = base_path {
-                    manifest.resources_mut().set_base_path(base);
-                    sign_config.set_base_path(base);
-                }
-
-                // If we successfully have a manifest config, then proceed with creating attack files.
-                if let Some(parent_path) = args.parent.clone() {
-                    manifest.set_parent(c2pa::Ingredient::from_file(parent_path)?)?;
-                }
-
-                // If the source file has a manifest store, and no parent is specified, then treat the source as a parent.
-                // note: This could be treated as an update manifest eventually since the image is the same
-                let source_ingredient = c2pa::Ingredient::from_file(&args.path)?;
-                if source_ingredient.manifest_data().is_some() && manifest.parent().is_none() {
-                    manifest
-                        .set_parent(source_ingredient)
-                        .expect("Set_parent failed to return");
-                }
-
-                let temp_path = args.attack_file.clone();
-
-                let attack_file_path = Path::new(&temp_path);
-
-                let attack_file_name = attack_file_path.file_stem().unwrap();
-
-                let result = output_file(
-                    &mut args,
-                    &mut manifest,
-                    &mut sign_config,
-                    field_type.to_owned(),
-                    &mut escaped_string.to_owned(),
-                    attack_file_name.to_str(),
-                    loop_index,
-                );
-                match result {
-                    Ok(_v) => {
-                        loop_index += 1;
-                    }
-                    Err(e) => println!("Failed to process file: {e:?}"),
-                }
+            if create_file(
+                field_type.clone(),
+                &mut loop_index,
+                mal_string,
+                &mut args,
+                false,
+            )
+            .is_err()
+            {
+                println!("Failed to create file: {}", loop_index);
             }
         }
     } else {
@@ -491,4 +514,107 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+pub mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::CliArgs;
+
+    #[test]
+    // Perform a unit test of injecting an XSS string in the title.
+    // This will not create any files.
+    fn test_xss_title() {
+        let path: PathBuf = [r"sample", "image.jpg"].iter().collect();
+        let manifest_temp: Result<PathBuf, ()> = Ok([r"sample", "test.json"].iter().collect());
+        let manifest_file: Option<PathBuf> = manifest_temp.ok();
+        let output_temp: Result<PathBuf, ()> =
+            Ok([r"sample_out", "signed_image.jpg"].iter().collect());
+        let output: Option<PathBuf> = output_temp.ok();
+        let target_temp: Result<String, ()> = Ok(String::from("title"));
+        let target: Option<String> = target_temp.ok();
+        let config: Option<String> = None;
+        let attack_file: String = String::from("attacks/xss.attack");
+        let detailed: bool = false;
+        let force: bool = false;
+        let verbose: bool = false;
+
+        let parent: Option<PathBuf> = None;
+        let field_type: String = String::from("title");
+
+        let mut test_cli: CliArgs = CliArgs {
+            path,
+            manifest_file,
+            output,
+            target,
+            attack_file,
+            parent,
+            config,
+            detailed,
+            force,
+            verbose,
+        };
+
+        let mut loop_index: i64 = 0;
+
+        assert!(create_file(
+            field_type,
+            &mut loop_index,
+            String::from("<script>alert('hi');</script>"),
+            &mut test_cli,
+            true
+        )
+        .is_ok())
+    }
+
+    #[test]
+    // Perform a unit test of injecting an XSS string in regex mode.
+    // This will not create any files.
+    fn test_xss_regex_author() {
+        let path: PathBuf = [r"sample", "image.jpg"].iter().collect();
+        let manifest_temp: Result<PathBuf, ()> =
+            Ok([r"sample", "author_name_regex.json"].iter().collect());
+        let manifest_file: Option<PathBuf> = manifest_temp.ok();
+        let output_temp: Result<PathBuf, ()> =
+            Ok([r"sample_out", "signed_image.jpg"].iter().collect());
+        let output: Option<PathBuf> = output_temp.ok();
+        let target_temp: Result<String, ()> = Ok(String::from("regex"));
+        let target: Option<String> = target_temp.ok();
+        let config: Option<String> = None;
+        let attack_file: String = String::from("attacks/xss.attack");
+        let detailed: bool = false;
+        let force: bool = false;
+        let verbose: bool = false;
+
+        let parent: Option<PathBuf> = None;
+        let field_type: String = String::from("regex");
+
+        let mut test_cli: CliArgs = CliArgs {
+            path,
+            manifest_file,
+            output,
+            target,
+            attack_file,
+            parent,
+            config,
+            detailed,
+            force,
+            verbose,
+        };
+
+        let mut loop_index: i64 = 0;
+
+        assert!(create_file(
+            field_type,
+            &mut loop_index,
+            String::from("<script>alert('hi');</script>"),
+            &mut test_cli,
+            true
+        )
+        .is_ok())
+    }
 }
