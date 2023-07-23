@@ -520,9 +520,10 @@ fn main() -> Result<()> {
 pub mod tests {
     #![allow(clippy::unwrap_used)]
 
+    use std::path::PathBuf;
+
     use super::*;
     use crate::CliArgs;
-    use std::path::PathBuf;
 
     #[test]
     // Perform a unit test of injecting an XSS string in the title.
