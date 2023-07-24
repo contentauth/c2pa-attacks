@@ -11,7 +11,7 @@ authors = ["Peleus Uhley <puhley@adobe.com>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 keywords = ["c2pa", "xmp", "metadata"]
-edition = "2018"
+edition = "2021"
 rust-version = "1.68.0"
 homepage = "https://contentauthenticity.org"
 repository = "https://github.com/contentauth/c2pa-attacks"
@@ -25,7 +25,7 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0" }
-tempfile = "3.6"
+tempfile = "3.7"
 regex = "1.9.1"
 
 [profile.release]
