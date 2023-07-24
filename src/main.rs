@@ -513,7 +513,7 @@ fn main() -> Result<()> {
                 Ok(_v) => {}
                 Err(e) => {
                     println!("Failed to create file: {}", loop_index);
-                    println!("Due to error: {e:?}");
+                    println!("Failed due to error: {e:?}");
                     loop_index += 1;
                 }
             }
