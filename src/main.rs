@@ -390,6 +390,10 @@ fn create_file(
         // read the json from file or config, and get base path if from file
         let (json, base_path) = match args.manifest_file.as_deref() {
             Some(manifest_path) => {
+                if !manifest_path.exists() {
+                    return Err(anyhow!("ERROR: Manifest file does not exist!"));
+                }
+
                 let base_path = manifest_path.parent();
                 (std::fs::read_to_string(manifest_path)?, base_path)
             }
@@ -497,16 +501,21 @@ fn main() -> Result<()> {
     if let Ok(lines) = read_lines(args.attack_file.clone()) {
         // Consumes the iterator, returns an (Optional) String
         for mal_string in lines.flatten() {
-            if create_file(
+            let result = create_file(
                 field_type.clone(),
                 &mut loop_index,
                 mal_string,
                 &mut args,
                 false,
-            )
-            .is_err()
-            {
-                println!("Failed to create file: {}", loop_index);
+            );
+
+            match result {
+                Ok(_v) => {}
+                Err(e) => {
+                    println!("Failed to create file: {}", loop_index);
+                    println!("Failed due to error: {e:?}");
+                    loop_index += 1;
+                }
             }
         }
     } else {
