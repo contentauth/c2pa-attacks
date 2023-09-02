@@ -145,7 +145,7 @@ fn escape_malicious_string(mal_string: String) -> Result<String> {
     // First escape any ending backslashes
     // Only escape if the last backslash isn't already escaped.
     let escaped_string: String = if mal_string.ends_with('\\') && !mal_string.ends_with("\\\\") {
-        let escape_backslash = Regex::new(r#"(?P<a>\\)"#).unwrap();
+        let escape_backslash = Regex::new(r"(?P<a>\\)").unwrap();
         let temp = escape_backslash
             .replace_all(mal_string.as_str(), "\\\\")
             .to_string();
@@ -210,7 +210,7 @@ fn remove_existing_assertion(
 // Creative Work assertion with the appropriate malicous fields.
 fn malicious_creative_work(
     field_type: String,
-    mal_string: &mut String,
+    mal_string: &String,
 ) -> Result<Option<CreativeWork>> {
     let mut new_creative_work: Option<CreativeWork> = None;
 
@@ -246,12 +246,12 @@ fn malicious_creative_work(
 //
 // The line numbers from the injection file start at zero.
 fn output_file(
-    args: &mut CliArgs,
+    args: &CliArgs,
     manifest: &mut Manifest,
-    sign_config: &mut SignConfig,
+    sign_config: &SignConfig,
     field_type: String,
-    mal_string: &mut String,
-    loop_index: &mut i64,
+    mal_string: &String,
+    loop_index: &i64,
     testing_mode: bool,
 ) -> Result<()> {
     let mut new_creative_work: Option<CreativeWork> = None;
@@ -378,10 +378,10 @@ fn create_file(
     field_type: String,
     loop_index: &mut i64,
     mal_string: String,
-    args: &mut CliArgs,
+    args: &CliArgs,
     testing_mode: bool,
 ) -> Result<()> {
-    let mut escaped_string = mal_string.clone();
+    let escaped_string = mal_string.clone();
 
     let config = args.config.clone();
 
@@ -449,9 +449,9 @@ fn create_file(
         let result = output_file(
             args,
             &mut manifest,
-            &mut sign_config,
+            &sign_config,
             field_type,
-            &mut escaped_string,
+            &escaped_string,
             loop_index,
             testing_mode,
         );
@@ -466,7 +466,7 @@ fn create_file(
 }
 
 fn main() -> Result<()> {
-    let mut args = CliArgs::parse();
+    let args = CliArgs::parse();
 
     // set RUST_LOG=debug to get detailed debug logging
     if std::env::var("RUST_LOG").is_err() {
@@ -505,7 +505,7 @@ fn main() -> Result<()> {
                 field_type.clone(),
                 &mut loop_index,
                 mal_string,
-                &mut args,
+                &args,
                 false,
             );
 
@@ -555,7 +555,7 @@ pub mod tests {
         let parent: Option<PathBuf> = None;
         let field_type: String = String::from("title");
 
-        let mut test_cli: CliArgs = CliArgs {
+        let test_cli: CliArgs = CliArgs {
             path,
             manifest_file,
             output,
@@ -574,7 +574,7 @@ pub mod tests {
             field_type,
             &mut loop_index,
             String::from("<script>alert('hi');</script>"),
-            &mut test_cli,
+            &test_cli,
             true
         )
         .is_ok())
@@ -602,7 +602,7 @@ pub mod tests {
         let parent: Option<PathBuf> = None;
         let field_type: String = String::from("regex");
 
-        let mut test_cli: CliArgs = CliArgs {
+        let test_cli: CliArgs = CliArgs {
             path,
             manifest_file,
             output,
@@ -621,7 +621,7 @@ pub mod tests {
             field_type,
             &mut loop_index,
             String::from("<script>alert('hi');</script>"),
-            &mut test_cli,
+            &test_cli,
             true
         )
         .is_ok())
