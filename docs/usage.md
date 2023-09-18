@@ -1,7 +1,6 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+# Using c2pa-attacks 
 
+- [Command-line syntax](#command-line-syntax)
 - [Supported target values](#supported-target-values)
   - [Method 1: Direct substitutions](#method-1-direct-substitutions)
   - [Method 2: Regex](#method-2-regex)
@@ -13,10 +12,7 @@
 - [Detailed manifest report](#detailed-manifest-report)
   - [Forced overwrite](#forced-overwrite)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-
-# Using c2pa-attacks 
+## Command-line syntax
 
 The command-line syntax for `c2pa-attacks` is:
 

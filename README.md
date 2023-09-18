@@ -1,25 +1,18 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [C2PA Attacks](#c2pa-attacks)
-  - [Overview](#overview)
-  - [Why the build the tool?](#why-the-build-the-tool)
-  - [Installation](#installation)
-    - [Prerequisite](#prerequisite)
-    - [Install c2pa-attacks](#install-c2pa-attacks)
-    - [Updating](#updating)
-  - [Testing locally in the Git directory](#testing-locally-in-the-git-directory)
-  - [Example command lines](#example-command-lines)
-    - [Inject into the author field via the command line](#inject-into-the-author-field-via-the-command-line)
-    - [Inject into the author field using regex substitution in the JSON manifest](#inject-into-the-author-field-using-regex-substitution-in-the-json-manifest)
-  - [Testing Certificate Authority fields](#testing-certificate-authority-fields)
-    - [Inspecting the created files](#inspecting-the-created-files)
-  - [Supported file formats](#supported-file-formats)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # C2PA Attacks
+
+- [Overview](#overview)
+- [Why the build the tool?](#why-the-build-the-tool)
+- [Installation](#installation)
+  - [Prerequisite](#prerequisite)
+  - [Install c2pa-attacks](#install-c2pa-attacks)
+  - [Updating](#updating)
+- [Testing locally in the Git directory](#testing-locally-in-the-git-directory)
+- [Example command lines](#example-command-lines)
+  - [Inject into the author field via the command line](#inject-into-the-author-field-via-the-command-line)
+  - [Inject into the author field using regex substitution in the JSON manifest](#inject-into-the-author-field-using-regex-substitution-in-the-json-manifest)
+- [Testing Certificate Authority fields](#testing-certificate-authority-fields)
+  - [Inspecting the created files](#inspecting-the-created-files)
+- [Supported file formats](#supported-file-formats)
 
 ## Overview
 
