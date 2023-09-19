@@ -4,13 +4,13 @@ This directory contains files that can be used as the basis for the injection at
 
 If you are looking for a GitHub repo of injections that you can copy and paste, then this repo contains thousands of injection strings for cross-site-scripting, SQL injection, and more: https://github.com/payloadbox/. The payloads for SQL Injection are grouped based on the type of database. This will allow you to find attack strings specific to your environment.
 
-If you are looking to inject really long strings for triggering buffer overflows, then it is easy to generate strings with some simple command lines. This will generate 100 'a' characters in output_file.attack:
+If you want to inject really long strings for triggering buffer overflows, then it is easy to generate strings with some simple command lines. This will generate 100 'a' characters in output_file.attack:
 
 ```shell
 printf 'a%.0s' {1..100} > output_file.attack
 ```
 
-The files all end in ".attack" so that GitHub will persist the binary characters when checked in. This file extension is mapped in .gitattributes to force GitHub to treat these files as binary files.
+The `.gitattributes` maps the `.attack` filename extension to `binary` so that GitHub will persist binary characters in files with that extension.
 
 ## Files
 
