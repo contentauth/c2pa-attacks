@@ -7,12 +7,12 @@
   - [Updating](#updating)
 - [Testing locally in the Git directory](#testing-locally-in-the-git-directory)
 - [Directory layout](#directory-layout)
+- [Supported file formats](#supported-file-formats)
 - [Examples](#examples)
   - [Inject into the author field from attack file](#inject-into-the-author-field-from-attack-file)
   - [Inject into the author field using regex substitution](#inject-into-the-author-field-using-regex-substitution)
 - [Testing Certificate Authority fields](#testing-certificate-authority-fields)
   - [Inspecting the created files](#inspecting-the-created-files)
-- [Supported file formats](#supported-file-formats)
 
 ## Overview
 
@@ -73,6 +73,30 @@ The tool's directory layout is:
 
 Your target application may not recognize the example certificates. If so, you can generate your own certificates from an approved CA for your platform and then use them as described in the [Appendix](docs/appendix.md#creating-and-using-an-x.509-certificate). The [C2PA technical specification](https://c2pa.org/specifications/specifications/1.3/specs/C2PA_Specification.html#_certificate_profile) describes requirements for signing certificates. 
 
+### Sample directory (/sample)
+
+- `malicious_certificate.key` and `malicious_certificate.pem` - A certificate / key pair with random characters in the common name, organization, and organizational unit fields for testing a certificate parser's capability to unhandled unexpected characters. These are from a self-signed CA, so they should not work on an environment that is enforcing a trusted CA list.
+- `malicious_certificate.json` - A manifest that is the same as `test.json` except that it specifies to use the malicious certificates for signing.
+
+## Supported file formats
+
+The tool works with the following types of asset files (also referred to as _assets_).
+
+| MIME type                           | extensions  | read only |
+| ----------------------------------- | ----------- | --------- |
+| `image/jpeg`                        | `jpg, jpeg` |           |
+| `image/png`                         | `png`       |           |
+| `image/avif`                        | `avif`      |    X      |
+| `image/heic`                        | `heic`      |    X      |
+| `image/heif`                        | `heif`      |    X      |
+| `video/mp4`                         | `mp4`       |           |
+| `application/mp4`                   | `mp4`       |           |
+| `audio/mp4`                         | `m4a`       |           |
+| `video/quicktime`                   |  `mov`      |           |
+| `application/x-c2pa-manifest-store` | `c2pa`      |           |
+
+NOTE: Quicktime (`.mov`) format is not yet fully supported.
+
 ## Examples 
 
 Here are some example uses of the tool that use files in the `attacks` and `sample` directories.  The examples operate on the sample image file `C.jpg` which has attached Content Credentials and the `test.json` manifest file.  
@@ -125,23 +149,5 @@ To use the certificates with unexpected characters, use the `malicious_certifica
 
 ### Inspecting the created files
 
-Install the [c2patool](https://github.com/contentauth/c2patool) so you can inspect individual files that are the output of this tool. For more information, see [c2patool - C2PA command line tool](https://opensource.contentauthenticity.org/docs/c2patool/).
+Install the [c2patool](https://github.com/contentauth/c2patool) so you can inspect individual files that this tool outputs. For more information, see [c2patool - C2PA command line tool](https://opensource.contentauthenticity.org/docs/c2patool/).
 
-## Supported file formats
-
-The tool works with the following types of asset files (also referred to as _assets_).
-
-| MIME type                           | extensions  | read only |
-| ----------------------------------- | ----------- | --------- |
-| `image/jpeg`                        | `jpg, jpeg` |           |
-| `image/png`                         | `png`       |           |
-| `image/avif`                        | `avif`      |    X      |
-| `image/heic`                        | `heic`      |    X      |
-| `image/heif`                        | `heif`      |    X      |
-| `video/mp4`                         | `mp4`       |           |
-| `application/mp4`                   | `mp4`       |           |
-| `audio/mp4`                         | `m4a`       |           |
-| `video/quicktime`                   |  `mov`      |           |
-| `application/x-c2pa-manifest-store` | `c2pa`      |           |
-
-NOTE: Quicktime (`.mov`) format is not yet fully supported.
