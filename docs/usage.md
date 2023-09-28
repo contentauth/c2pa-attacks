@@ -9,7 +9,7 @@
 - [Adding a manifest to an asset file](#adding-a-manifest-to-an-asset-file)
   - [Specifying a parent file](#specifying-a-parent-file)
 - [Detailed manifest report](#detailed-manifest-report)
-  - [Forced overwrite](#forced-overwrite)
+- [Forced overwrite](#forced-overwrite)
 
 ## Command-line syntax
 
@@ -130,7 +130,7 @@ You can also specify a parent file in the manifest definition.
 
 To display a detailed report describing the internal C2PA format of manifests contained in the asset, use the `-d` option. This only works when `-v` is also specified.  The tool displays the detailed report to standard output (stdout). 
 
-### Forced overwrite
+## Forced overwrite
 
 The tool will return an error if the output file already exists. Use the `--force` / `-f` option to force overwriting the output file. For example:
 

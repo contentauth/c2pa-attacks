@@ -14,11 +14,11 @@ This directory contains the following files:
 - `rendering.attack`: A simple "Hello World" attack that contains newlines to inspire testing rendering techniques that split the UI display with injected newlines.
 - `special_characters.attack`: A selection of special characters as a way to test special character handling in the UI.
 
- NOTE: The `.gitattributes` file in this directory maps the `.attack` filename extension to `binary` so that GitHub will persist binary characters in those files.
+NOTE: The `.gitattributes` file in this directory maps the `.attack` filename extension to `binary` so that GitHub will persist binary characters in those files.
 
 ## Generating long strings
 
-To inject really long strings for triggering buffer overflows, it is easy to generate strings with some simple command lines. For exampl,e this command generates 100 'a' characters in the file `output_file.attack`:
+To inject really long strings for triggering buffer overflows, it is easy to generate strings with some simple command lines. For example, this command generates 100 'a' characters in the file `output_file.attack`:
 
 ```shell
 printf 'a%.0s' {1..100} > output_file.attack

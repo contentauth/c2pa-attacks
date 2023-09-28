@@ -1,5 +1,7 @@
 # C2PA Attacks
 
+Page contents:
+
 - [Overview](#overview)
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
@@ -15,11 +17,16 @@
 - [Testing Certificate Authority fields](#testing-certificate-authority-fields)
   - [Inspecting the created files](#inspecting-the-created-files)
 
+ Additional documentation:
+ - [Using c2pa-attacks](docs/usage.md): How to use the `c2pa-attacks` CLI.
+ - [Injection attack files](attacks/README.md): Description of example attack files in the `attacks` directory.
+ - [Appendix](docs/appendix.md): References and links for more information.
+
 ## Overview
 
-The C2PA Attacks Tool performs security testing on a Content Credentials application (an application that uses the CAI SDKs and tools). The tool generates images with associated C2PA manifest stores to test the application for security vulnerabilities such as cross-site scripting. It takes a file of attack strings, adds each string into the designated manifest field, and produces a corresponding malicious C2PA image for testing. The tool does not automatically check to see if the attack was successful.
+The C2PA Attacks Tool, `c2pa-attacks`, performs security testing on a Content Credentials application (an application that uses the CAI SDKs and tools). The tool generates images with associated C2PA manifest stores to test the application for security vulnerabilities such as cross-site scripting. It takes a file of attack strings, adds each string into the designated manifest field, and produces a corresponding malicious C2PA image for testing. The tool does not automatically check to see if the attack was successful.
 
-This tool facilitates security testing early in the development cycle of Content Credentials applications. For such applications, often the first step in processing an asset is to validate the signature and reject any whose public key is not from a trusted CA. That said, it is still good to test the parsers since hackers could find ways to get unexpected data into C2PA manfiest fields. In addition, it is conceivable that a Content Credentials application could parse manifest data without validating the certificate. Therefore, it is critical that the application safely handles unexpected input.
+This tool facilitates security testing early in the development cycle of Content Credentials applications. For such applications, often the first step in processing an asset is to validate the signature and reject any whose public key is not from a trusted CA. That said, it is still good to test the parsers since hackers could find ways to get unexpected data into C2PA manifest fields. In addition, it is conceivable that a Content Credentials application could parse manifest data without validating the certificate. Therefore, it is critical that the application safely handles unexpected input.
 
 Each Content Credentials application has its own unique behavior and technology stack. Therefore, this tool provides a framework that you can customize for your specific needs.  The files provided with this tool are examples for initial experimentation. You will need to create customized attack files for your specific environment. Refer to the [appendix](docs/appendix.md) for information on how to cover more file types, more injections, and other forms of code coverage.
 
@@ -106,7 +113,7 @@ These examples create output in the `sample_out` directory.
 
 ### Inject into the author field using direct substitution
 
-The following command is an example of using direct substituion. For a general explanation of using direct substitution, see [Using c2pa-attacks](./docs/usage.md#direct-substitution).
+The following command is an example of using direct substitution. For a general explanation of using direct substitution, see [Using c2pa-attacks](./docs/usage.md#direct-substitution).
 
 The following example reads attack strings one line at a time from the file `attacks/xss.attack` file and injects them into the `test.json` manifest file's author name field. The command saves its output in the `sample_out` directory. The `-f` flag forces overwrite of any existing files.
 
@@ -147,7 +154,7 @@ This command outputs malicious files in the `sample_out` directory:
 
 Security researchers can create self-signed certificate authorities and leaf certificates based on them. The C2PA project provides tools for generating certificates using OpenSSL in this repository: <https://github.com/c2pa-org/testing-private/tree/main/cert-generation>.
 
-Within this project, the sample directory has a certificate with some unexpected values in common fields that can be used for signing. These certificates are based on a self-signed CA so any tools that validate against a trusted CA list won't accept them. However, you can use them to ensure that your certificate parsers can handle unexpected characters. They do not represent a complrehensive attack suite but it is a place to start.
+Within this project, the sample directory has a certificate with some unexpected values in common fields that can be used for signing. These certificates are based on a self-signed CA so any tools that validate against a trusted CA list won't accept them. However, you can use them to ensure that your certificate parsers can handle unexpected characters. They do not represent a comprehensive attack suite but it is a place to start.
 
 To use the certificates with unexpected characters, use the `malicious_certificate.json` manifest file when running your tests. It will use the `malicious_certificate.pem` file and the `malicious_certificate.key` file to sign the C2PA images. For more complete testing, you can use the C2PA [testing-private](https://github.com/c2pa-org/testing-private/tree/main/cert-generation) repository mentioned above to create your own certificate chains. If you just need to test certificates with different algorithms, then there is a baseline suite located here: <https://github.com/contentauth/c2pa-rs/tree/main/sdk/tests/fixtures/certs>.
 

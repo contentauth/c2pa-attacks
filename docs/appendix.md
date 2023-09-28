@@ -16,7 +16,7 @@ The4 PayloadBox GitHub Repo has a collection of injection strings: <https://gith
 
 ## Additional baseline test case files
 
-If you want more sample file types beyond JPEGs for testing, the C2PA maintains a list of sample files here: <https://github.com/c2pa-org/public-testfiles>.
+For sample file types beyond JPEGs for testing, the C2PA maintains a list of sample files here: <https://github.com/c2pa-org/public-testfiles>.
 
 ## Creating and using an X.509 certificate
 
