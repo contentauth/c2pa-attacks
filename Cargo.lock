@@ -144,6 +144,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-generic"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86bc01d15ca67ec7653924057aa97c30de62d06a24e6834387eba6c72c8318e7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.28",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,11 +313,12 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "c2pa"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7aa352b27c99f142a8fb16466b36c7d5db933ba11c0898bfce1a622a97bf0437"
+checksum = "4c0cbed7fe1d38780464cbcc1fefc020c998912a7dbee87b9864435295aaf2b6"
 dependencies = [
  "asn1-rs",
+ "async-generic",
  "async-trait",
  "atree",
  "base64 0.21.2",
@@ -325,6 +337,7 @@ dependencies = [
  "getrandom",
  "half 2.2.1",
  "hex",
+ "id3",
  "img-parts",
  "instant",
  "js-sys",
@@ -924,6 +937,17 @@ checksum = "0703ae284fc167426161c2e3f1da3ea71d94b21bedbcc9494e92b28e334e3dca"
 dependencies = [
  "cxx",
  "cxx-build",
+]
+
+[[package]]
+name = "id3"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a85caa20f41eef2391fd1dd42b015d0eba17171cdb1a162246a7cc03cd73ab1e"
+dependencies = [
+ "bitflags 2.3.3",
+ "byteorder",
+ "flate2",
 ]
 
 [[package]]
