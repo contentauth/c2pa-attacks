@@ -313,9 +313,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "c2pa"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c0cbed7fe1d38780464cbcc1fefc020c998912a7dbee87b9864435295aaf2b6"
+checksum = "47a426d5a2fd6ba73bd1d5a235dd1497f9e30b9128851b596b4f806663a5588c"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -340,6 +340,7 @@ dependencies = [
  "id3",
  "img-parts",
  "instant",
+ "jfifdump",
  "js-sys",
  "lazy_static",
  "log",
@@ -1023,6 +1024,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "453ad9f582a441959e5f0d088b02ce04cfe8d51a8eaf077f12ac6d3e94164ca6"
 
 [[package]]
+name = "jfifdump"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b56eea9f2724de66d5f44cbc4b45e716a32c83a581d163cee2b767ddc220426"
+dependencies = [
+ "json",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1030,6 +1040,12 @@ checksum = "445dde2150c55e483f3d8416706b97ec8e8237c307e5b7b4b8dd15e6af2a0730"
 dependencies = [
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "json"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
 
 [[package]]
 name = "keccak"
