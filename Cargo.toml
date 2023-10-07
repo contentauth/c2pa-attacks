@@ -18,7 +18,7 @@ repository = "https://github.com/contentauth/c2pa-attacks"
 
 [dependencies]
 anyhow = "1.0"
-c2pa = { version = "0.26.0", features = ["fetch_remote_manifests", "file_io", "xmp_write"] }
+c2pa = { version = "0.27.1", features = ["fetch_remote_manifests", "file_io", "xmp_write"] }
 clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
 log = "0.4"
@@ -26,7 +26,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0" }
 tempfile = "3.8"
-regex = "1.9.5"
+regex = "1.9.6"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
