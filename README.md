@@ -20,6 +20,7 @@ Page contents:
  Additional documentation:
  - [Using c2pa-attacks](docs/usage.md): How to use the `c2pa-attacks` CLI.
  - [Injection attack files](attacks/README.md): Description of example attack files in the `attacks` directory.
+ - [Utilities](utilities/README.md): Overview of the available utility scripts for managing and generating c2pa-attacks files.
  - [Appendix](docs/appendix.md): References and links for more information.
 
 ## Overview
@@ -107,9 +108,11 @@ NOTE: Quicktime (`.mov`) format is not yet fully supported.
 
 ## Examples 
 
-Here are some example uses of the tool that use files in the `attacks` and `sample` directories.  The examples operate on the sample image file `sample/C.jpg` which has attached Content Credentials and the `sample/test.json` manifest file.  
+If you want to quickly create all possible test files without running each command individually, then the `generate_sample_out.sh` script in the `utilities` directory can be used to get started. More information on that tool is available in utility directory's [README](./utilities/README.md) file. However, it is recommended that you still read through the examples below to understand what that script will produce.
 
-These examples create output in the `sample_out` directory.
+These example uses of the tool use the provided files in the `attacks` and `sample` directories.  The examples operate on the sample image file `sample/C.jpg` which has attached Content Credentials and the `sample/test.json` manifest file.
+
+The following examples create output in the `sample_out` directory.
 
 ### Inject into the author field using direct substitution
 
