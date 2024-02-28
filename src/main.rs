@@ -500,7 +500,7 @@ fn main() -> Result<()> {
     // If we can successfully read the injection file path
     if let Ok(lines) = read_lines(args.attack_file.clone()) {
         // Consumes the iterator, returns an (Optional) String
-        for mal_string in lines.flatten() {
+        for mal_string in lines.map_while(Result::ok) {
             let result = create_file(
                 field_type.clone(),
                 &mut loop_index,
