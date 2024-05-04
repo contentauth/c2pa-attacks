@@ -26,26 +26,29 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust_version }}
-          components: llvm-tools-preview
+          # components: llvm-tools-preview
           override: true
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+      # - name: Install cargo-llvm-cov
+      #   uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Generate code coverage
-        env:
-          RUST_BACKTRACE: "1"
-        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+      #  - name: Generate code coverage
+      #   env:
+      #     RUST_BACKTRACE: "1"
+      #   run: cargo llvm-cov --all-features --lcov --output-path lcov.info
 
-      - name: Upload code coverage results
-        uses: codecov/codecov-action@v3
-        with:
-          # token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          verbose: true
+      # - name: Upload code coverage results
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     # token: ${{ secrets.CODECOV_TOKEN }}
+      #     fail_ci_if_error: true
+      #     verbose: true
+
+      - name: Run unit tests
+        run: cargo test --all-features --verbose 
 
   clippy_check:
     name: Clippy
