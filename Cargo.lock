@@ -155,9 +155,9 @@ dependencies = [
 
 [[package]]
 name = "async-generic"
-version = "0.1.2"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86bc01d15ca67ec7653924057aa97c30de62d06a24e6834387eba6c72c8318e7"
+checksum = "58a6914896b0907b4df8f696dea38ef8a2b75b32142f80fd5985eb39bcf07778"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -349,9 +349,9 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
 name = "c2pa"
-version = "0.32.4"
+version = "0.32.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b02cf788e6db0cc891849c0f4df0c0f6aa0425ab8e172d3fa4dc3255d29191e"
+checksum = "3b310fd7826fe5cfe259dd49f033233a6c43975d98cccc736489624cd95684e8"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -2118,9 +2118,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.118"
+version = "1.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d947f6b3163d8857ea16c4fa0dd4840d52f3041039a85decd46867eb1abef2e4"
+checksum = "e8eddb61f0697cc3989c5d64b452f5488e2b8a60fd7d5076a3045076ffef8cb0"
 dependencies = [
  "indexmap 2.2.6",
  "itoa",
