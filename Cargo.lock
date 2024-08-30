@@ -155,9 +155,9 @@ dependencies = [
 
 [[package]]
 name = "async-generic"
-version = "0.1.2"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86bc01d15ca67ec7653924057aa97c30de62d06a24e6834387eba6c72c8318e7"
+checksum = "80548ada198a0260b9e9d09dfce57919d6c239c3aae2309b3efc1f89096a0e29"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -354,9 +354,9 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
 name = "c2pa"
-version = "0.33.3"
+version = "0.33.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "395a2adb3fd71d845ee39b9a699578813ed1ce86e2099242416edff3306bd31e"
+checksum = "92f8535be6a37c42f1b82ad13a8a4a0668f0bafdc948c2aa261ed16e61079791"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -2546,9 +2546,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.0"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31e6302e3bb753d46e83516cae55ae196fc0c309407cf11ab35cc51a4c2a4633"
+checksum = "22784dbdf76fdde8af1aeda5622b546b422b6fc585325248a2bf9f5e41e94d6c"
 dependencies = [
  "form_urlencoded",
  "idna",
