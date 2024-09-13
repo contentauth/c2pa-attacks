@@ -155,9 +155,9 @@ dependencies = [
 
 [[package]]
 name = "async-generic"
-version = "0.1.2"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86bc01d15ca67ec7653924057aa97c30de62d06a24e6834387eba6c72c8318e7"
+checksum = "80548ada198a0260b9e9d09dfce57919d6c239c3aae2309b3efc1f89096a0e29"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -354,16 +354,16 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 
 [[package]]
 name = "c2pa"
-version = "0.33.3"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "395a2adb3fd71d845ee39b9a699578813ed1ce86e2099242416edff3306bd31e"
+checksum = "7a0c71405a74ec53ac2c991820423a143b4904aebc1ab42973f2c80b7bf6cf4f"
 dependencies = [
  "asn1-rs",
  "async-generic",
  "async-recursion",
  "async-trait",
  "atree",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bcder",
  "byteorder",
  "byteordered",
@@ -1882,9 +1882,9 @@ checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 
 [[package]]
 name = "riff"
-version = "1.0.1"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9b1a3d5f46d53f4a3478e2be4a5a5ce5108ea58b100dcd139830eae7f79a3a1"
+checksum = "3c601484456988d75017d86700d3743b949c21cdc7399f940c75e34680d185c5"
 
 [[package]]
 name = "ring"
@@ -2546,9 +2546,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.0"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31e6302e3bb753d46e83516cae55ae196fc0c309407cf11ab35cc51a4c2a4633"
+checksum = "22784dbdf76fdde8af1aeda5622b546b422b6fc585325248a2bf9f5e41e94d6c"
 dependencies = [
  "form_urlencoded",
  "idna",
