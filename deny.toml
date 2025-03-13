@@ -13,10 +13,7 @@ targets = [
 
 # Deny all advisories unless explicitly ignored.
 [advisories]
-vulnerability = "deny"
-unmaintained = "deny"
-yanked = "deny"
-notice = "deny"
+version = 2
 
 ignore = [
   "RUSTSEC-2020-0071", # time 0.1.45 (see https://github.com/indygreg/cryptography-rs/issues/10)
@@ -31,6 +28,8 @@ wildcards = "allow"
 
 # List of allowed licenses.
 [licenses]
+version = 2
+confidence-threshold = 0.8
 allow = [
   "Apache-2.0",
   "BSD-2-Clause",
@@ -43,9 +42,6 @@ allow = [
   "Unicode-DFS-2016",
   "Zlib",
 ]
-copyleft = "deny"
-unlicensed = "deny"
-confidence-threshold = 0.8
 
 [[licenses.clarify]]
 name = "ring"
