@@ -1,4 +1,4 @@
-// Copyright 2022 Adobe. All rights reserved.
+// Copyright 2025 Adobe. All rights reserved.
 // This file is licensed to you under the Apache License,
 // Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 // or the MIT license (http://opensource.org/licenses/MIT),
@@ -17,7 +17,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use c2pa::{create_signer, Signer, SigningAlg};
+use c2pa::{Signer, SigningAlg, create_signer};
 use serde::Deserialize;
 
 // Pull in default certs so the binary can self config
@@ -103,7 +103,8 @@ impl SignConfig {
         eprintln!(
             "\n\n-----------\n\n\
             Note: Using default private key and signing certificate. This is only valid for development.\n\
-            A permanent key and cert should be provided in the manifest definition or in the environment variables.\n");
+            A permanent key and cert should be provided in the manifest definition or in the environment variables.\n"
+        );
 
         let signer = create_signer::from_keys(DEFAULT_CERTS, DEFAULT_KEY, alg, tsa_url)
             .context("Invalid certification data")?;
