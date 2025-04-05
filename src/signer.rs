@@ -17,7 +17,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use c2pa::{Signer, SigningAlg, create_signer};
+use c2pa::{create_signer, Signer, SigningAlg};
 use serde::Deserialize;
 
 // Pull in default certs so the binary can self config
