@@ -42,9 +42,9 @@ use serde_json::{Map, Value};
 mod signer;
 // This is not used in the current implementation
 /* use serde::Deserialize; */
-use signer::SignConfig;
-
 use std::fs;
+
+use signer::SignConfig;
 use url::Url;
 
 // This is not used in the current implementation
