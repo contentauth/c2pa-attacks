@@ -18,20 +18,20 @@
 /// -f -t author -a ./attacks/xss.txt
 use std::{
     collections::HashMap,
-    fs::{File, create_dir_all, remove_file},
+    fs::{create_dir_all, remove_file, File},
     io::{self, BufRead},
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 // These are not used in the current implementation: ManifestDefinition, Manifest, and ManifestStore
 use c2pa::{
-    Builder, ClaimGeneratorInfo, Error, Ingredient, Reader,
     assertions::{
-        CreativeWork, SchemaDotOrgPerson,
         labels::{self, CREATIVE_WORK},
+        CreativeWork, SchemaDotOrgPerson,
     },
+    Builder, ClaimGeneratorInfo, Error, Ingredient, Reader,
 };
 use clap::{Parser, Subcommand};
 use env_logger::Env;
@@ -628,7 +628,7 @@ fn create_file(
     );
 
     // configure the SDK
-    configure_sdk(&args).context("Could not configure c2pa-rs")?;
+    configure_sdk(args).context("Could not configure c2pa-rs")?;
 
     // if we have a manifest config, process it
     if args.manifest_file.is_some() || config.is_some() {
@@ -704,7 +704,7 @@ fn create_file(
 
         // If we successfully have a manifest config, then proceed with creating attack files.
         if let Some(parent_path) = &args.parent {
-            let mut ingredient = load_ingredient(&parent_path)?;
+            let mut ingredient = load_ingredient(parent_path)?;
             ingredient.set_is_parent();
             builder.add_ingredient(ingredient);
         }
@@ -735,7 +735,7 @@ fn create_file(
             }
             Err(e) => {
                 println!("Failed to process file: {e:?}");
-                let new_filename = create_output_file_name(&args, field_type.clone(), &loop_index);
+                let new_filename = create_output_file_name(args, field_type.clone(), loop_index);
                 println!("Removing file: {}", new_filename);
                 if let Some(mut output) = args.output.clone() {
                     output.pop();
@@ -864,16 +864,14 @@ pub mod tests {
 
         let mut loop_index: i64 = 0;
 
-        assert!(
-            create_file(
-                field_type,
-                &mut loop_index,
-                String::from("<script>alert('hi');</script>"),
-                &test_cli,
-                true
-            )
-            .is_ok()
+        assert!(create_file(
+            field_type,
+            &mut loop_index,
+            String::from("<script>alert('hi');</script>"),
+            &test_cli,
+            true
         )
+        .is_ok())
     }
 
     #[test]
@@ -916,15 +914,13 @@ pub mod tests {
 
         let mut loop_index: i64 = 0;
 
-        assert!(
-            create_file(
-                field_type,
-                &mut loop_index,
-                String::from("<script>alert('hi');</script>"),
-                &test_cli,
-                true
-            )
-            .is_ok()
+        assert!(create_file(
+            field_type,
+            &mut loop_index,
+            String::from("<script>alert('hi');</script>"),
+            &test_cli,
+            true
         )
+        .is_ok())
     }
 }
