@@ -30,8 +30,10 @@ The following table describes the command-line options.
 | `--config` | `-c` | `<config>` | Specifies a manifest definition as a JSON string. See [Providing a manifest definition on the command line](#providing-a-manifest-definition-on-the-command-line). |
 | `--manifest` | `-m` | `<manifest_file>` | Specifies a manifest file to add to an asset file. See [Adding a manifest to an asset file](#adding-a-manifest-to-an-asset-file).
 | `--parent` | `-p` | `<parent_file>` | Specifies the path to the parent file. See [Specifying a parent file](#specifying-a-parent-file). |
+| `--no_signing_verify` | None | N/A |  Do not validate the signature after signing an asset, which speeds up signing. See [Speeding up signing](#speeding-up-signing) |
 | `--output` | `-o` | `<output_file>` | Specifies the path and title for the output files. See [Displaying manifest data](#adding-a-manifest-to-an-asset-file). |
 | `--detailed` | `-d` | N/A | Display detailed C2PA-formatted manifest data. See [Detailed manifest report](#detailed-manifest-report). |
+| `--trust` | N/A | N/A | Set additional trust validation parameters. See [Configuring trust support](#configuring-trust-support). |
 | `--force` | `-f` | N/A | Force overwriting of the output file. See [Forced overwrite](#forced-overwrite). |
 | `--version` | `-V` | N/A | Display version information. |
 | `--help` | `-h` | N/A | Display CLI help information. |
@@ -44,26 +46,26 @@ The tool can inject malicious strings into manfiests before signing in two ways,
 
 ### Direct substitution
 
-The simplest approach is to directly inject a value into a specified manifest field. This approach is supported only for some common fields because there are too many manifest fields to make them all available from a command line. More fields will be added as the tool matures. 
+This was the simplest approach when the c2pa-attacks tool was first created. Although, as the C2PA specification and the Rust SDK matured, this approach became less relevant. In most cases, the Regex subsitution is the better approach. Although, several of these options are still usable.
 
-This approach is an easy way to start testing the most common fields without understanding JSON manifests.  The injections in this approach are done after the JSON file has been imported and turned into a manifest structure in memory. Therefore, you can inject any type of character using this method.
+This approach is an easy way to start testing the most common fields without understanding JSON manifests.  The injections in this approach are done after the JSON file has been imported and turned into a manifest structure in memory. As noted below, some of these options are no longer relevant due to changes in the SDK.
 
-You can specify only one value as the argument for this option.
+This command line option only accepts one value as an argument.
 
 | Argument value | Description | Example value in `test.json` |
 |----------------|-------------|------------------------------|
 | `title` | The title field for the image. | "My Title" |
-| `author` | The author name within the Creative Work assertion. | "Joe Bloggs" |
-| `person_identifier` | With the Creative Work assertion, this refers to the Creative Work's URL identifier for that SchemaDotOrg Person entry. For further information, see [C2PA Technical Specification](https://c2pa.org/specifications/specifications/1.3/specs/C2PA_Specification.html#_use_of_schema_org). | N/A |
+| `author` | The author name within the Creative Work assertion. NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | "Joe Bloggs" |
+| `person_identifier` | With the Creative Work assertion, this refers to the Creative Work's URL identifier for that SchemaDotOrg Person entry. For further information, see [C2PA Technical Specification](https://c2pa.org/specifications/specifications/1.4/specs/C2PA_Specification.html#_use_of_schema_org). NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | N/A |
 | `claim_generator` | The claim generator field in the manifest. | "TestApp" |
-| `vendor` | Sets the vendor prefix to be used when generating manifest labels. For some strings, you will see an error `claim could not be converted to CBOR`. This just means that one of the attack strings couldn't be converted due to being incompatible. Attack strings that are compatible with CBOR will work and images will be generated. | N/AA |
-| `label` | The label for the manifest assertion. For some strings, you will see an error `claim could not be converted to CBOR`. This just means that one of the attack strings couldn't be converted due to being incompatible. Attack strings that are compatible with CBOR will work and images will be generated. | "stds.schema-org.CreativeWork", "c2pa.actions", and "my.assertion". |
-| `instance_id` | The XMP instance ID for the assertion. | N/A |
-| `format` | Sets the format for the assertion's ingredient. | N/A |
+| `vendor` | Sets the vendor prefix to be used when generating manifest labels. For some strings, you will see an error that the `claim could not be converted to CBOR`. This means that one of the characters in the attack string is incompatible with CBOR. Attack strings that are compatible with CBOR will work and images will be generated. Note that this value will get a urn:uuid appended to it by the SDK per the specification. | N/A |
+| `label` | The label for the claim. This value is expected to be a [GUID](https://github.com/contentauth/c2pa-rs/blob/c2pa-v0.48.2/sdk/src/claim.rs#L429) and it is validated according to these [validation rules](https://docs.rs/uuid/latest/src/uuid/parser.rs.html#98-100). Injecting any malicious string that isn't in the GUID format enforced by UUID parser will throw an error. However, this might be useful if you have a need to set specific UUIDs as part of the attack. This represents the primary label for the claim and it does not affect other label values. | N/A |
+| `instance_id` | The instance ID for the claim. NOTE: This is currently no longer supported because the latest version of the [SDK overrides](https://github.com/contentauth/c2pa-rs/blob/c2pa-v0.48.2/sdk/src/builder.rs#L993) any set value before signing. | N/A |
+| `format` | Sets the format for the assertion's ingredient. NOTE: This is currently no longer supported because the current version of the SDK [determines the format](https://github.com/contentauth/c2pa-rs/blob/c2pa-v0.48.2/sdk/src/builder.rs#L1125) by looking at the file extension of the file to be signed. If you want the format to be different from the actual file, then change the file extension before signing to a supported file type. See: https://github.com/contentauth/c2pa-rs/blob/c2pa-v0.48.2/sdk/src/utils/mime.rs | N/A |
 
 ### Regex substitution
 
-If the target value is `regex`, then tool searches the manifest file for the string, "C2PA_ATTACK" and replaces all occurrences of it with the malicious string before embedding the assertion into the file.  The advantage of this approach is that you can inject malicous strings into any field of the manifest file including custom fields. However, for unit testing, you would likely only want one "C2PA_ATTACK" string per manifest file.
+If the target value is `regex`, then tool searches the JSON manifest file for the string, "C2PA_ATTACK" and replaces all occurrences of it with the malicious string before embedding the assertion into the file.  The advantage of this approach is that you can inject malicous strings into any field of the manifest file including custom fields. However, for unit testing, you would likely only want one "C2PA_ATTACK" string per manifest file.
 
 Since the tool injects malicious values into a JSON string, any trailing backslashes or quotes are automatically escaped to ensure the manifest is valid JSON. In addition, the [Serde serialization framework](https://serde.rs/) checks for control characters (0x00 - 0x32) and throws an error if it detects them; see [serde_json's escape logic](https://github.com/serde-rs/json/blob/master/src/read.rs#L787). Therefore, these types of character injections are not allowed in the regex workflow. A future release will add a feature to inject these characters just before signing the file.
 
@@ -140,4 +142,28 @@ c2pa-attacks sample/image.jpg \
 -f -o sample_out/signed_image.jpg
 ```
 
+## Speeding up signing
 
+By default, `c2patool` validates the signature immediately after signing a manifest. To disable this and speed up the validation process, use the `--no_signing_verify` option.
+
+## Configuring trust support
+
+Enable trust support by using the `trust` subcommand, as follows:
+
+```
+c2patool [path] trust [OPTIONS]
+```
+
+When the `trust` subcommand is supplied, should c2patool encounter a problem with validating any of the claims in the asset, its JSON output will contain a `validation_status` field whose value is an array of objects, each describing a validation problem.
+
+### Additional options
+
+Several additional CLI options are available with the `trust` sub-command to specify the location of files containing the trust anchors list or known certificate list, as described in the following table. You can also use environment variables to specify these values.
+
+<div class="trust-table" markdown="1">
+
+| Option | Environment variable | Description |
+| ------ | -------------------- | ----------- | 
+| `--trust_anchors` | `C2PATOOL_TRUST_ANCHORS` | URL or relative path to a file containing a list of trust anchors (in PEM format) used to validate the manifest certificate chain. To be valid, the manifest certificate chain must lead to a certificate on the trust list. All certificates in the trust anchor list must have the [Basic Constraints extension](https://docs.digicert.com/en/iot-trust-manager/certificate-templates/create-json-formatted-certificate-templates/extensions/basic-constraints.html) and the CA attribute of this extension must be `True`.  |
+| `--allowed_list` | `C2PATOOL_ALLOWED_LIST` | URL or relative path to a file containing a list of end-entity certificates (in PEM format) to trust. These certificates are used to sign the manifest. Supersedes the `trust_anchors` setting. The list must NOT contain certificates with the [Basic Constraints extension](https://docs.digicert.com/en/iot-trust-manager/certificate-templates/create-json-formatted-certificate-templates/extensions/basic-constraints.html) with the CA attribute `True`. |
+| `--trust_config` | `C2PATOOL_TRUST_CONFIG` | URL or relative path to a file containing the allowed set of custom certificate extended key usages (EKUs). Each entry in the list is an object identifiers in [OID dot notation](http://www.oid-info.com/#oid) format.  |
