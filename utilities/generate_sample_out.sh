@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2023 Adobe. All rights reserved.
+# Copyright 2025 Adobe. All rights reserved.
 # This file is licensed to you under the Apache License,
 # Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 # or the MIT license (http://opensource.org/licenses/MIT),
@@ -28,7 +28,9 @@
 debugging=false
 
 # The list of target locations where substitutions will occur
-target_fields=("title" "author" "person_identifier" "claim_generator" "vendor" "label" "instance_id" "format" "regex")
+# format and instance_id are not used in the current implementation and are temporarily removed
+# "instance_id" "format"
+target_fields=("title" "author" "person_identifier" "claim_generator" "vendor" "label" "regex")
 
 # The location of the attack file directory.
 attack_dir="./attacks/"
@@ -186,6 +188,7 @@ for attack_file in "${attack_files[@]}"; do
             command_line="${command_line} -m ${source_json}"
         fi
 
+        # command_line="${command_line} -v"
         command_line="${command_line} -o ${sample_out_dir}${output_name}"
         command_line="${command_line} -t ${target_field}"
         command_line="${command_line} -a ${attack_dir}${attack_file}"
