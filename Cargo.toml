@@ -4,7 +4,7 @@ name = "c2pa-attacks"
 # Please do not manually edit `version`. Version updates will be generated
 # automatically when c2pa-attacks is published. Remember to use (MINOR) or
 # (MAJOR) tags in the PR title to trigger non-patch updates as needed.
-version = "0.1.0"
+version = "0.0.2"
 
 description = "Command line tool for creating C2PA manifests for security testing"
 authors = ["Peleus Uhley <puhley@adobe.com>"]
