@@ -155,11 +155,11 @@ This command outputs malicious files in the `sample_out` directory:
 
 ## Testing Certificate Authority fields
 
-Security researchers can create self-signed certificate authorities and leaf certificates based on them. The C2PA project provides tools for generating certificates using OpenSSL in this repository: <https://github.com/c2pa-org/testing-private/tree/main/cert-generation>.
+Security researchers can create self-signed certificate authorities and leaf certificates based on them. The Content Authenticity Initiative provides [guidance](https://opensource.contentauthenticity.org/docs/c2pa-python-example/#for-development-using-self-signed-certificates) on how to generate your own self-signed certificates.
 
 Within this project, the sample directory has a certificate with some unexpected values in common fields that can be used for signing. These certificates are based on a self-signed CA so any tools that validate against a trusted CA list won't accept them. However, you can use them to ensure that your certificate parsers can handle unexpected characters. They do not represent a comprehensive attack suite but it is a place to start.
 
-To use the certificates with unexpected characters, use the `malicious_certificate.json` manifest file when running your tests. It will use the `malicious_certificate.pem` file and the `malicious_certificate.key` file to sign the C2PA images. For more complete testing, you can use the C2PA [testing-private](https://github.com/c2pa-org/testing-private/tree/main/cert-generation) repository mentioned above to create your own certificate chains. If you just need to test certificates with different algorithms, then there is a baseline suite located here: <https://github.com/contentauth/c2pa-rs/tree/main/sdk/tests/fixtures/certs>.
+To use the certificates with unexpected characters, use the `malicious_certificate.json` manifest file when running your tests. It will use the `malicious_certificate.pem` file and the `malicious_certificate.key` file to sign the C2PA images. For more complete testing, you can use the Content Authenticity Initiative [guidance](https://opensource.contentauthenticity.org/docs/c2pa-python-example/#for-development-using-self-signed-certificates) mentioned above to create your own certificate chains. If you just need to test certificates with different algorithms, then there is a baseline suite located here: <https://github.com/contentauth/c2pa-rs/tree/main/sdk/tests/fixtures/certs>.
 
 
 ### Inspecting the created files

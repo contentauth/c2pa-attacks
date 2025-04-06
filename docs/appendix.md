@@ -20,6 +20,6 @@ For sample file types beyond JPEGs for testing, the C2PA maintains a list of sam
 
 ## Creating and using an X.509 certificate
 
-If you want to create your own certificate authority, see the scripts in <https://github.com/c2pa-org/testing-private/blob/main/cert-generation/>.
+If you want to create your own certificate authority, C2PA members can see the OpenSSL commands in <https://opensource.contentauthenticity.org/docs/c2pa-python-example/#for-development-using-self-signed-certificates/>.
 
-Rather than generating your own certificates, you can also test creating your own manifests using provided pre-built certificates; see [Creating and using an X.509 certificate](https://opensource.contentauthenticity.org/docs/c2patool/x_509) for more information.
+Rather than generating your own certificates, you can also test creating your own manifests using provided pre-built certificates; see [Creating and using an X.509 certificate](https://opensource.contentauthenticity.org/docs/c2patool/docs/x_509) for more information.
