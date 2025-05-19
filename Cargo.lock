@@ -381,9 +381,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "c2pa"
-version = "0.51.0"
+version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27863a89ae8abd0d9ff9df60fdf91da7cf82a0f045bc8927aaf67b8f5430038d"
+checksum = "f46b117cdab88564991424ad25111165e216b7a22815600b4bf90d31721ac2ab"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -395,14 +395,17 @@ dependencies = [
  "byteorder",
  "byteordered",
  "bytes",
- "c2pa-crypto",
  "c2pa-status-tracker",
  "chrono",
  "ciborium",
  "config",
  "console_log",
+ "const-hex",
+ "const-oid",
  "conv",
  "coset",
+ "der",
+ "ecdsa",
  "ed25519-dalek",
  "extfmt",
  "getrandom 0.2.15",
@@ -418,9 +421,17 @@ dependencies = [
  "memchr",
  "mp4",
  "multibase",
+ "nom",
  "non-empty-string",
  "nonempty-collections",
+ "num-bigint-dig",
+ "openssl",
+ "p256",
+ "p384",
+ "p521",
  "pem",
+ "pkcs1",
+ "pkcs8",
  "png_pong",
  "quick-xml",
  "rand 0.8.5",
@@ -433,6 +444,7 @@ dependencies = [
  "regex",
  "reqwest",
  "riff",
+ "ring",
  "rsa",
  "serde",
  "serde-transcode",
@@ -456,7 +468,9 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "web-time",
  "wstd",
+ "x509-certificate",
  "x509-parser",
  "zeroize",
  "zip",
@@ -478,60 +492,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "url",
-]
-
-[[package]]
-name = "c2pa-crypto"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4952b1f2ef18d701030e56899b4d85d3bd89d8aa6ec4b3b4c15876152f9c2232"
-dependencies = [
- "asn1-rs",
- "async-generic",
- "async-trait",
- "base64 0.22.1",
- "bcder",
- "bytes",
- "c2pa-status-tracker",
- "chrono",
- "ciborium",
- "const-hex",
- "const-oid",
- "coset",
- "der",
- "ecdsa",
- "ed25519-dalek",
- "getrandom 0.2.15",
- "hex",
- "js-sys",
- "nom",
- "num-bigint-dig",
- "openssl",
- "p256",
- "p384",
- "p521",
- "pkcs1",
- "pkcs8",
- "rand 0.8.5",
- "rasn",
- "rasn-ocsp",
- "rasn-pkix",
- "ring",
- "rsa",
- "serde",
- "serde_bytes",
- "sha1",
- "sha2",
- "spki",
- "thiserror 2.0.12",
- "ureq",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
- "x509-certificate",
- "x509-parser",
 ]
 
 [[package]]
@@ -776,12 +736,6 @@ checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "crossbeam-utils"
-version = "0.8.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crunchy"
@@ -4258,13 +4212,12 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "2.6.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dcb24d0152526ae49b9b96c1dcf71850ca1e0b882e4e28ed898a93c41334744"
+checksum = "12598812502ed0105f607f941c386f43d441e00148fce9dec3ca5ffb0bde9308"
 dependencies = [
  "arbitrary",
  "crc32fast",
- "crossbeam-utils",
  "indexmap 2.9.0",
  "memchr",
 ]
