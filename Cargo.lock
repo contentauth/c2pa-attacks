@@ -381,9 +381,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "c2pa"
-version = "0.51.0"
+version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27863a89ae8abd0d9ff9df60fdf91da7cf82a0f045bc8927aaf67b8f5430038d"
+checksum = "946a4b76fb3b3db618f5c77f657d2642a1c5bc2e635b52bd4053f08d1e1e7a5b"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -395,14 +395,16 @@ dependencies = [
  "byteorder",
  "byteordered",
  "bytes",
- "c2pa-crypto",
- "c2pa-status-tracker",
  "chrono",
  "ciborium",
  "config",
  "console_log",
+ "const-hex",
+ "const-oid",
  "conv",
  "coset",
+ "der",
+ "ecdsa",
  "ed25519-dalek",
  "extfmt",
  "getrandom 0.2.15",
@@ -418,9 +420,17 @@ dependencies = [
  "memchr",
  "mp4",
  "multibase",
+ "nom",
  "non-empty-string",
  "nonempty-collections",
+ "num-bigint-dig",
+ "openssl",
+ "p256",
+ "p384",
+ "p521",
  "pem",
+ "pkcs1",
+ "pkcs8",
  "png_pong",
  "quick-xml",
  "rand 0.8.5",
@@ -433,6 +443,7 @@ dependencies = [
  "regex",
  "reqwest",
  "riff",
+ "ring",
  "rsa",
  "serde",
  "serde-transcode",
@@ -456,7 +467,10 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "web-time",
+ "windows-core",
  "wstd",
+ "x509-certificate",
  "x509-parser",
  "zeroize",
  "zip",
@@ -479,66 +493,6 @@ dependencies = [
  "tempfile",
  "url",
 ]
-
-[[package]]
-name = "c2pa-crypto"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4952b1f2ef18d701030e56899b4d85d3bd89d8aa6ec4b3b4c15876152f9c2232"
-dependencies = [
- "asn1-rs",
- "async-generic",
- "async-trait",
- "base64 0.22.1",
- "bcder",
- "bytes",
- "c2pa-status-tracker",
- "chrono",
- "ciborium",
- "const-hex",
- "const-oid",
- "coset",
- "der",
- "ecdsa",
- "ed25519-dalek",
- "getrandom 0.2.15",
- "hex",
- "js-sys",
- "nom",
- "num-bigint-dig",
- "openssl",
- "p256",
- "p384",
- "p521",
- "pkcs1",
- "pkcs8",
- "rand 0.8.5",
- "rasn",
- "rasn-ocsp",
- "rasn-pkix",
- "ring",
- "rsa",
- "serde",
- "serde_bytes",
- "sha1",
- "sha2",
- "spki",
- "thiserror 2.0.12",
- "ureq",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
- "x509-certificate",
- "x509-parser",
-]
-
-[[package]]
-name = "c2pa-status-tracker"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad3c0107b0fc1208441689e15b22589a090b2c449f42b74d648c55a7fbdc3591"
 
 [[package]]
 name = "cc"
@@ -776,12 +730,6 @@ checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "crossbeam-utils"
-version = "0.8.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crunchy"
@@ -3804,15 +3752,15 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.61.0"
+version = "0.61.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
+checksum = "c0fdd3ddb90610c7638aa2b3a3ab2904fb9e5cdbecc643ddb3647212781c4ae3"
 dependencies = [
  "windows-implement",
  "windows-interface",
  "windows-link",
  "windows-result",
- "windows-strings 0.4.0",
+ "windows-strings 0.4.2",
 ]
 
 [[package]]
@@ -3856,9 +3804,9 @@ dependencies = [
 
 [[package]]
 name = "windows-result"
-version = "0.3.2"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c64fd11a4fd95df68efcfee5f44a294fe71b8bc6a91993e2791938abcc712252"
+checksum = "56f42bd332cc6c8eac5af113fc0c1fd6a8fd2aa08a0119358686e5160d0586c6"
 dependencies = [
  "windows-link",
 ]
@@ -3874,9 +3822,9 @@ dependencies = [
 
 [[package]]
 name = "windows-strings"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
+checksum = "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57"
 dependencies = [
  "windows-link",
 ]
@@ -4258,13 +4206,12 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "2.6.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dcb24d0152526ae49b9b96c1dcf71850ca1e0b882e4e28ed898a93c41334744"
+checksum = "12598812502ed0105f607f941c386f43d441e00148fce9dec3ca5ffb0bde9308"
 dependencies = [
  "arbitrary",
  "crc32fast",
- "crossbeam-utils",
  "indexmap 2.9.0",
  "memchr",
 ]
