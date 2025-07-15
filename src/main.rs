@@ -223,7 +223,7 @@ fn load_trust_resource(resource: &TrustResource) -> Result<String> {
     match resource {
         TrustResource::File(path) => {
             let data = std::fs::read_to_string(path)
-                .with_context(|| format!("Failed to read trust resource from path: {:?}", path))?;
+                .with_context(|| format!("Failed to read trust resource from path: {path:?}"))?;
 
             Ok(data)
         }
@@ -231,7 +231,7 @@ fn load_trust_resource(resource: &TrustResource) -> Result<String> {
             #[cfg(not(target_os = "wasi"))]
             let data = reqwest::blocking::get(url.to_string())?
                 .text()
-                .with_context(|| format!("Failed to read trust resource from URL: {}", url))?;
+                .with_context(|| format!("Failed to read trust resource from URL: {url}"))?;
 
             #[cfg(target_os = "wasi")]
             let data = blocking_get(&url.to_string())?;
@@ -257,7 +257,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
     {
         if let Some(trust_list) = &trust_anchors {
             let data = load_trust_resource(trust_list)?;
-            debug!("Using trust anchors from {:?}", trust_list);
+            debug!("Using trust anchors from {trust_list:?}");
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = TA.replace("replacement_val", &replacement_val);
 
@@ -268,7 +268,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
 
         if let Some(allowed_list) = &allowed_list {
             let data = load_trust_resource(allowed_list)?;
-            debug!("Using allowed list from {:?}", allowed_list);
+            debug!("Using allowed list from {allowed_list:?}");
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = AL.replace("replacement_val", &replacement_val);
 
@@ -279,7 +279,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
 
         if let Some(trust_config) = &trust_config {
             let data = load_trust_resource(trust_config)?;
-            debug!("Using trust config from {:?}", trust_config);
+            debug!("Using trust config from {trust_config:?}");
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = TC.replace("replacement_val", &replacement_val);
 
@@ -554,9 +554,9 @@ fn output_file(
         let reader = Reader::from_file(&output).map_err(special_errs)?;
         if args.verbose {
             if args.detailed {
-                println!("{:#?}", reader);
+                println!("{reader:#?}");
             } else {
-                println!("{}", reader)
+                println!("{reader}")
             }
         }
     }
@@ -736,7 +736,7 @@ fn create_file(
             Err(e) => {
                 println!("Failed to process file: {e:?}");
                 let new_filename = create_output_file_name(args, field_type.clone(), loop_index);
-                println!("Removing file: {}", new_filename);
+                println!("Removing file: {new_filename}");
                 if let Some(mut output) = args.output.clone() {
                     output.pop();
                     output.push(new_filename);
@@ -803,7 +803,7 @@ fn main() -> Result<()> {
             match result {
                 Ok(_v) => {}
                 Err(e) => {
-                    println!("Failed to create file: {}", loop_index);
+                    println!("Failed to create file: {loop_index}");
                     println!("Failed due to error: {e:?}");
                     loop_index += 1;
                 }
