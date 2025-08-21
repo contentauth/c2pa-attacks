@@ -27,7 +27,7 @@ serde_derive = "1.0"
 serde_json = { version = "1.0" }
 tempfile = "3.15.0"
 regex = "1.11.1"
-url = "2.5.0"
+url = "2.5.5"
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
 reqwest = { version = "0.12.23", features = ["blocking"] }
