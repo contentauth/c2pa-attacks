@@ -26,6 +26,7 @@ use std::{
 
 use anyhow::{anyhow, bail, Context, Result};
 // These are not used in the current implementation: ManifestDefinition, Manifest, and ManifestStore
+#[allow(deprecated)]
 use c2pa::{
     assertions::{
         labels::{self, CREATIVE_WORK},
@@ -261,6 +262,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = TA.replace("replacement_val", &replacement_val);
 
+            #[allow(deprecated)]
             c2pa::settings::load_settings_from_str(&setting, "json")?;
 
             enable_trust_checks = true;
@@ -272,6 +274,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = AL.replace("replacement_val", &replacement_val);
 
+            #[allow(deprecated)]
             c2pa::settings::load_settings_from_str(&setting, "json")?;
 
             enable_trust_checks = true;
@@ -283,6 +286,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
             let replacement_val = serde_json::Value::String(data).to_string(); // escape string
             let setting = TC.replace("replacement_val", &replacement_val);
 
+            #[allow(deprecated)]
             c2pa::settings::load_settings_from_str(&setting, "json")?;
 
             enable_trust_checks = true;
@@ -291,8 +295,10 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
 
     // if any trust setting is provided enable the trust checks
     if enable_trust_checks {
+        #[allow(deprecated)]
         c2pa::settings::load_settings_from_str(r#"{"verify": { "verify_trust": true} }"#, "json")?;
     } else {
+        #[allow(deprecated)]
         c2pa::settings::load_settings_from_str(r#"{"verify": { "verify_trust": false} }"#, "json")?;
     }
 
@@ -301,6 +307,7 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
         let replacement_val = serde_json::Value::Bool(!args.no_signing_verify).to_string();
         let setting = VS.replace("replacement_val", &replacement_val);
 
+        #[allow(deprecated)]
         c2pa::settings::load_settings_from_str(&setting, "json")?;
     }
 
@@ -389,16 +396,20 @@ fn remove_existing_assertion(
 
 // For attack types of author or person_identifier, we will create a new malicious
 // Creative Work assertion with the appropriate malicous fields.
+#[allow(deprecated)]
 fn malicious_creative_work(
     field_type: String,
     mal_string: &String,
 ) -> Result<Option<CreativeWork>> {
+    #[allow(deprecated)]
     let mut new_creative_work: Option<CreativeWork> = None;
 
     if field_type.eq("author") {
+        #[allow(deprecated)]
         let author = SchemaDotOrgPerson::new().set_name(mal_string.to_owned())?;
         new_creative_work = Some(CreativeWork::new().add_author(author).expect("add_author"));
     } else if field_type.eq("person_identifier") {
+        #[allow(deprecated)]
         let cw_person = SchemaDotOrgPerson::new()
             .set_name("Malicious User".to_owned())
             .unwrap()
@@ -463,6 +474,7 @@ fn output_file(
     loop_index: &i64,
     testing_mode: bool,
 ) -> Result<()> {
+    #[allow(deprecated)]
     let mut new_creative_work: Option<CreativeWork> = None;
 
     if field_type.eq("author") || field_type.eq("person_identifier") {
