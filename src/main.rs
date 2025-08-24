@@ -524,14 +524,6 @@ fn output_file(
             bail!("output type must match source type");
         }
 
-        if output.exists() {
-            if args.force {
-                remove_file(&output)?;
-            } else {
-                bail!("Output already exists; use -f/force to force write");
-            }
-        }
-
         if output.file_name().is_none() {
             bail!("Missing filename on output");
         }
@@ -542,6 +534,17 @@ fn output_file(
         let new_filename = create_output_file_name(args, field_type, loop_index);
         output.pop();
         output.push(new_filename);
+
+        if output.exists() {
+            if args.force {
+                if args.verbose {
+                    println!("Manually removing file: {:?}", output.to_str());
+                }
+                remove_file(&output)?;
+            } else {
+                bail!("Output already exists; use -f/force to force write");
+            }
+        }
 
         if args.verbose {
             println!("File to be created: {:?}", output.to_str());
