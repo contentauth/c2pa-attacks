@@ -12,7 +12,7 @@ Page contents:
   - [Sample directory](#sample-directory)
 - [Supported file formats](#supported-file-formats)
 - [Examples](#examples)
-  - [Inject into the author field using direct substitution](#inject-into-the-author-field-from-attack-file)
+  - [Inject into the title field using direct substitution](#inject-into-the-title-field-from-attack-file)
   - [Inject into the author field using regex substitution](#inject-into-the-author-field-using-regex-substitution)
 - [Testing Certificate Authority fields](#testing-certificate-authority-fields)
   - [Inspecting the created files](#inspecting-the-created-files)
@@ -25,7 +25,7 @@ Page contents:
 
 ## Overview
 
-The C2PA Attacks Tool, `c2pa-attacks`, performs security testing on a Content Credentials application (an application that uses the CAI SDKs and tools). The tool generates images with associated C2PA manifest stores to test the application for security vulnerabilities such as cross-site scripting and injection attacks against the file parser. It takes a file of attack strings, adds each string into the designated manifest field, and produces a corresponding malicious C2PA image for testing. The tool does not automatically check to see if the attack was successful. It should be noted that this version of the tool only supports version 1 of the C2PA specification.
+The C2PA Attacks Tool, `c2pa-attacks`, performs security testing on a Content Credentials application (an application that uses the CAI SDKs and tools). The tool generates images with associated C2PA manifest stores to test the application for security vulnerabilities such as cross-site scripting and injection attacks against the file parser. It takes a file of attack strings, adds each string into the designated manifest field, and produces a corresponding malicious C2PA image for testing. The tool does not automatically check to see if the attack was successful. This tool can support version 1 and version 2 of the C2PA specification. The default is now version 2.
 
 This tool facilitates security testing early in the development cycle of Content Credentials applications. For such applications, often the first step in processing an asset is to validate the signature and reject any whose public key is not from a trusted CA. That said, it is still good to test the parsers since malicious adversaries could find ways to get unexpected data into C2PA manifest fields. In addition, it is conceivable that a Content Credentials application could parse manifest data without validating the certificate. Therefore, it is critical that the application safely handles unexpected input.
 
@@ -114,30 +114,30 @@ These example uses of the tool use the provided files in the `attacks` and `samp
 
 The following examples create output in the `sample_out` directory.
 
-### Inject into the author field using direct substitution
+### Inject into the title field using direct substitution
 
 The following command is an example of using direct substitution. For a general explanation of using direct substitution, see [Using c2pa-attacks](./docs/usage.md#direct-substitution).
 
-The following example reads attack strings one line at a time from the file `attacks/xss.attack` file and injects them into the `test.json` manifest file's author name field. The command saves its output in the `sample_out` directory. The `-f` flag forces overwrite of any existing files.
+The following example reads attack strings one line at a time from the file `attacks/xss.attack` file and injects them into the `test.json` manifest file's title field. The `test.json` manifest file is for version 1 of the C2PA specification. You could use `test_claim_v2.json` for content targeting version 2 of the C2PA specification. The command saves its output in the `sample_out` directory. The `-f` flag forces overwrite of any existing files.
 
 ```shell
 c2pa-attacks ./sample/C.jpg  \
 -m ./sample/test.json \
--t author \
+-t title \
 -a ./attacks/xss.attack \
 -o ./sample_out/C_mod2.jpg -f 
 ```
 
 This command outputs malicious files in the `sample_out` directory:
-- `author_xss_0_C_mod2.jpg` has an associated manifest with the first line from `xss.attack` injected into the author name field.
-- `author_xss_1_C_mod2.jpg`  has an associated manifest with the second line from `xss.attack` injected into the author name field.
+- `title_xss_0_C_mod2.jpg` has an associated manifest with the first line from `xss.attack` injected into the title field.
+- `title_xss_1_C_mod2.jpg`  has an associated manifest with the second line from `xss.attack` injected into the title field.
 - And so on.
 
 ### Inject into the author field using regex substitution
 
 The following command is an example of using regex substituion. For a general explanation of using regex substitution, see [Using c2pa-attacks](./docs/usage.md#regex-substitution).
 
-This example command reads attack strings one line at a time from the `xss.attack` file and injects them into the `author_name_regex.json` manifest file by replacing occurrences of the string "C2PA_ATTACK". The command saves its output in the `sample_out` directory. The `-f` flag forces overwrite of any existing files.
+This example command reads attack strings one line at a time from the `xss.attack` file and injects them into the `author_name_regex.json` manifest file by replacing occurrences of the string "C2PA_ATTACK". This file is based on version 1 of the C2PA specification. However, the same technique could be used with a version 2 claim manifest. The command saves its output in the `sample_out` directory. The `-f` flag forces overwrite of any existing files.
 
 ```shell
 /c2pa-attacks ./sample/C.jpg \
@@ -165,4 +165,3 @@ To use the certificates with unexpected characters, use the `malicious_certifica
 ### Inspecting the created files
 
 Install the [c2patool](https://github.com/contentauth/c2patool) so you can inspect individual files that this tool outputs. For more information, see [c2patool - C2PA command line tool](https://opensource.contentauthenticity.org/docs/c2patool/).
-

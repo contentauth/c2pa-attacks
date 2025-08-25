@@ -1,0 +1,47 @@
+{
+    "claim_version": 2,
+    "alg": "es256",
+    "private_key": "es256_private.key",
+    "sign_cert": "es256_certs.pem",
+    "ta_url": "http://timestamp.digicert.com",
+    "claim_generator_info": [
+        {
+            "name": "C2PA Attacks",
+            "version": "1.0.0"
+        }
+    ],
+    "title": "C2PA_ATTACK",
+    "assertions": [
+        {
+            "label": "c2pa.actions.v2",
+            "data": {
+                "actions": [
+                    {
+                        "action": "c2pa.created",
+                        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/computationalCapture",
+                        "description": "Created by C2PA Attacks."
+                    }
+                ]
+            }
+        },
+        {
+            "label": "cawg.training-mining",
+            "data": {
+                "entries": {
+                    "cawg.ai_inference": {
+                        "use": "notAllowed"
+                    },
+                    "cawg.ai_generative_training": {
+                        "use": "notAllowed"
+                    }
+                }
+            }
+        },
+        {
+            "label": "my.assertion",
+            "data": {
+                "any_tag": "whatever I want"
+            }
+        }
+    ]
+}
