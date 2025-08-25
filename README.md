@@ -12,7 +12,7 @@ Page contents:
   - [Sample directory](#sample-directory)
 - [Supported file formats](#supported-file-formats)
 - [Examples](#examples)
-  - [Inject into the title field using direct substitution](#inject-into-the-title-field-from-attack-file)
+  - [Inject into the title field using direct substitution](#inject-into-the-title-field-using-direct-substitution)
   - [Inject into the author field using regex substitution](#inject-into-the-author-field-using-regex-substitution)
 - [Testing Certificate Authority fields](#testing-certificate-authority-fields)
   - [Inspecting the created files](#inspecting-the-created-files)
