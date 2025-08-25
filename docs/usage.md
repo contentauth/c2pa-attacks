@@ -55,7 +55,7 @@ This command line option only accepts one value as an argument.
 | Argument value | Description | Example value in `test.json` |
 |----------------|-------------|------------------------------|
 | `title` | The title field for the image. | "My Title" |
-| `author` | The author name within the Creative Work assertion. NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | "Joe Bloggs" |
+| `author` | The author name within the Creative Work assertion. NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification, but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | "Content Creator" |
 | `person_identifier` | With the Creative Work assertion, this refers to the Creative Work's URL identifier for that SchemaDotOrg Person entry. For further information, see [C2PA Technical Specification](https://c2pa.org/specifications/specifications/1.4/specs/C2PA_Specification.html#_use_of_schema_org). NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | N/A |
 | `claim_generator` | The claim generator field in the manifest. | "TestApp" |
 | `vendor` | Sets the vendor prefix to be used when generating manifest labels. For some strings, you will see an error that the `claim could not be converted to CBOR`. This means that one of the characters in the attack string is incompatible with CBOR. Attack strings that are compatible with CBOR will work and images will be generated. Note that this value will get a urn:uuid appended to it by the SDK per the specification. | N/A |
@@ -93,13 +93,13 @@ c2pa-attacks sample/image.json \
 
 ## Adding a manifest to an asset file
 
-To add manifest data to a file, provide the path to the asset file to be signed and use the `--manifest` / `-m` option with a manifest JSON file as the option argument. Then, use the `--output` / `-o` option to specify the desired location and name suffix for the output files.
+To add manifest data to a file, provide the path to the asset file to be signed and use the `--manifest` / `-m` option with a manifest JSON file as the option argument. The sample directory contains examples for both version 1 (`test.json`) and version 2 (`test_claim_v2.json`) claim manifests. Next, use the `--output` / `-o` option to specify the desired location and name suffix for the output files.
 If you do not use the `--output` / `-o` option, then the tool will not generate any output.
 The tool will put all of the manipulated file in the same folder as the image specified in the output flag. 
 
 CAUTION: If the output file is the same as the source file, the tool will overwrite the source file. 
 
-For example, in the following example line, the tool puts all of the generated files in the `sample_out` directory and will create it if it does not exist. 
+For example, in the following example line, the tool puts all of the generated files in the `sample_out` directory and will create it if it does not exist. This command line is using the C2PA version 1 claim manifest example file. For a version 2 claim manifest, use `test_claim_v2.json` instead.
 
 ```shell
 c2pa-attacks sample/image.jpg \
