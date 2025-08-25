@@ -2,9 +2,9 @@
 
 ## C2PA references
 
-The "c2patool" is a good complimentary tool for inspecting the files created by this tool: <https://github.com/contentauth/c2patool>.
+The "c2patool" is a good complimentary tool for inspecting the files created by this tool: [https://github.com/contentauth/c2pa-rs/tree/main/cli](https://github.com/contentauth/c2pa-rs/tree/main/cli).
 
-Technical specifications for C2PA standard assertions including JSON samples: <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_c2pa_standard_assertions>.
+Technical specifications for C2PA standard assertions including JSON samples: [https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_c2pa_standard_assertions](https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_c2pa_standard_assertions).
 
 ## Injection string references
 
