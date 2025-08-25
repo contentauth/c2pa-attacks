@@ -31,7 +31,9 @@ This tool facilitates security testing early in the development cycle of Content
 
 Each Content Credentials application has its own unique behavior and technology stack. Therefore, this tool provides a framework that you can customize for your specific needs.  The files provided with this tool are examples for initial experimentation. You will need to create customized attack files for your specific environment. Refer to the [appendix](docs/appendix.md) for information on how to cover more file types, more injections, and other forms of code coverage.
 
-NOTE: This tool is a modification of the open-source C2PA [c2patool](https://github.com/contentauth/c2patool), but is not a replacement for it. The c2patool contains much more functionality and is a companion for this tool during analysis and testing.
+NOTE: This tool is a modification of the open-source C2PA [c2patool](https://github.com/contentauth/c2pa-rs/tree/main/cli), but is not a replacement for it. The c2patool contains much more functionality and is a companion for this tool during analysis and testing.
+
+NOTE: This tool is based on the [c2pa-rs SDK](https://github.com/contentauth/c2pa-rs/). As c2pa-rs matures, it occasionally deprecates certain functionality in order to keep current with the C2PA specification. As a result, this tool occasionally has to remove or alter functionality as the c2pa-rs library is updated. If you are targeting older versions of the specification, then you may want to try testing with older releases. 
 
 ## Installation
 
@@ -57,7 +59,7 @@ To ensure you have the latest version, enter this command:
 c2pa-attacks -V 
 ```
 
-The tool will display the version installed. Compare the version number displayed with the latest release version shown in the [repository releases page](https://github.com/contentauth/c2patool/releases). To update to the latest version, reinstall the tool using the command shown above.
+The tool will display the version installed. Compare the version number displayed with the latest release version shown in the [repository releases page](https://github.com/contentauth/c2pa-rs/releases?q=c2patool). To update to the latest version, reinstall the tool using the command shown above.
 
 ## Testing locally in the Git directory
 
@@ -78,7 +80,7 @@ The tool's directory layout is:
 - `attacks` contains example files that can be used as the basis for injection attacks.  See the [README](./attacks/README.md) in that directory for details.
 - `sample` contains example certificates and signing keys, example manifest files that reference them, and other related example files.
 
-Your target application may not recognize the example certificates. If so, you can generate your own certificates from an approved CA for your platform and then use them as described in the [Appendix](docs/appendix.md#creating-and-using-an-x.509-certificate). The [C2PA technical specification](https://c2pa.org/specifications/specifications/1.3/specs/C2PA_Specification.html#_certificate_profile) describes requirements for signing certificates. 
+Your target application may not recognize the example certificates. If so, you can generate your own certificates from an approved CA for your platform and then use them as described in the [Appendix](docs/appendix.md#creating-and-using-an-x.509-certificate). The [C2PA technical specification](https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#x509_certificates) describes requirements for signing certificates. 
 
 ### Sample directory 
 
@@ -164,4 +166,4 @@ To use the certificates with unexpected characters, use the `malicious_certifica
 
 ### Inspecting the created files
 
-Install the [c2patool](https://github.com/contentauth/c2patool) so you can inspect individual files that this tool outputs. For more information, see [c2patool - C2PA command line tool](https://opensource.contentauthenticity.org/docs/c2patool/).
+Install the [c2patool](https://github.com/contentauth/c2pa-rs/tree/main/cli) so you can inspect individual files that this tool outputs. For more information, see [c2patool - C2PA command line tool](https://opensource.contentauthenticity.org/docs/c2patool/).
