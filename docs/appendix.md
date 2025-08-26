@@ -14,6 +14,8 @@ OWASP Testing Guide section on SQL Injection: <https://owasp.org/www-project-web
 
 The4 PayloadBox GitHub Repo has a collection of injection strings: <https://github.com/payloadbox>.
 
+Another possibility for injection strings is prompt injection attacks. They are not currently included as sample strings because they are often specific to the AI that is reading the data. However, if your organization builds AI that is intended to read C2PA metadata, you could use this tool to create assets with prompt injections tailored to your AI solution for testing.
+
 ## Additional baseline test case files
 
 For sample file types beyond JPEGs for testing, the C2PA maintains a list of sample files here: <https://github.com/c2pa-org/public-testfiles>.
