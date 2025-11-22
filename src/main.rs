@@ -712,7 +712,7 @@ fn create_file(
         }
         */
         if let Some(base) = base_path.as_ref() {
-            builder.set_base_path(base.clone());
+            builder.set_base_path(base);
             sign_config.set_base_path(base);
         }
 
