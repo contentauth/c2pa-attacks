@@ -30,7 +30,7 @@ regex = "1.12.2"
 url = "2.5.0"
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
-reqwest = { version = "0.12.24", features = ["blocking"] }
+reqwest = { version = "0.12.25", features = ["blocking"] }
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
