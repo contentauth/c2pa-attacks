@@ -18,7 +18,7 @@ repository = "https://github.com/contentauth/c2pa-attacks"
 
 [dependencies]
 anyhow = "1.0"
-c2pa = { version = "0.71.2", features = ["fetch_remote_manifests", "file_io"] }
+c2pa = { version = "0.73.0", features = ["fetch_remote_manifests", "file_io"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 env_logger = "0.11"
 log = "0.4"
@@ -30,7 +30,7 @@ regex = "1.12.2"
 url = "2.5.0"
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
-reqwest = { version = "0.12.24", features = ["blocking"] }
+reqwest = { version = "0.12.25", features = ["blocking"] }
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
