@@ -337,9 +337,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "c2pa"
-version = "0.73.1"
+version = "0.73.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9c3a86e8fb13cbd9f12506312f39a691312100ddb1b0ab54b62985b901db1be"
+checksum = "ed792a47f5f414da1eddbb2efceb6ad3355bf9046805677b4bf4534d37aa00e1"
 dependencies = [
  "asn1-rs",
  "async-generic",
