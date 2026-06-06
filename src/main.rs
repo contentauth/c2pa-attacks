@@ -22,6 +22,7 @@ use std::{
     io::{self, BufRead},
     path::{Path, PathBuf},
     str::FromStr,
+    sync::Arc,
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -32,13 +33,18 @@ use c2pa::{
         labels::{self, CREATIVE_WORK},
         CreativeWork, SchemaDotOrgPerson,
     },
-    Builder, ClaimGeneratorInfo, Error, Ingredient, Reader,
+    format_from_path,
+    settings::Settings,
+    Builder, ClaimGeneratorInfo, Context as C2paContext, Error, Ingredient, ManifestDefinition,
+    Reader,
 };
 use clap::{Parser, Subcommand};
 use env_logger::Env;
+use etcetera::BaseStrategy;
 use log::debug;
 use regex::Regex;
-use serde_json::{Map, Value};
+use serde::Deserialize;
+use serde_json::{json, Map, Value};
 
 mod signer;
 // This is not used in the current implementation
@@ -47,6 +53,12 @@ use std::fs;
 
 use signer::SignConfig;
 use url::Url;
+
+/// Sidecar trust files stored next to the settings file (`--settings` parent directory).
+const SIDECAR_TRUST_LIST_PEM: &str = "c2pa-trust-list.pem";
+const SIDECAR_TRUST_LIST_LEGACY_PEM: &str = "c2pa-trust-list-legacy.pem";
+const SIDECAR_TRUST_STORE_CFG: &str = "c2pa-trust-store.cfg";
+const SIDECAR_TRUST_ALLOWED: &str = "c2pa-trust-allowed.sha256.txt";
 
 // This is not used in the current implementation
 /*
@@ -157,6 +169,7 @@ struct CliArgs {
     attack_file: String,
 
     /// Path to a parent file
+    #[clap(short, long)]
     #[arg(short = 'p')]
     parent: Option<PathBuf>,
 
@@ -183,6 +196,35 @@ struct CliArgs {
     /// Do not perform validation of signature after signing.
     #[clap(long = "no_signing_verify")]
     no_signing_verify: bool,
+
+    // TODO: ideally this would be called config, not to be confused with the other config arg
+    /// Path to the settings file in JSON or TOML.
+    ///
+    /// By default the settings file is read from `$XDG_CONFIG_HOME/c2pa/c2pa.toml`.
+    #[clap(
+        long,
+        env = "C2PATOOL_SETTINGS",
+        default_value = default_settings_path().into_os_string()
+    )]
+    settings: PathBuf,
+}
+
+fn default_settings_path() -> PathBuf {
+    let strategy = etcetera::choose_base_strategy().unwrap();
+    let mut path = strategy.config_dir();
+    path.push("c2pa");
+    path.push("c2pa.toml");
+    path
+}
+
+#[derive(Debug, Default, Deserialize)]
+// Add fields that are not part of the standard Manifest
+struct ManifestDef {
+    // Flattened into the JSON root; the field is not read directly after deserialize.
+    #[serde(flatten)]
+    _manifest: ManifestDefinition,
+    // allows adding ingredients with file paths
+    ingredient_paths: Option<Vec<PathBuf>>,
 }
 
 // Convert certain errors to output messages.
@@ -196,8 +238,8 @@ fn special_errs(e: c2pa::Error) -> anyhow::Error {
     }
 }
 
-// loads an ingredient, allowing for a folder or json ingredient
-fn load_ingredient(path: &Path) -> Result<Ingredient> {
+// adds an ingredient, from a file, folder or json definition
+fn add_ingredient(builder: &mut Builder, path: &Path, is_parent: bool) -> Result<()> {
     // if the path is a folder, look for ingredient.json
     let mut path_buf = PathBuf::from(path);
     let path = if path.is_dir() {
@@ -207,14 +249,27 @@ fn load_ingredient(path: &Path) -> Result<Ingredient> {
         path
     };
     if path.extension() == Some(std::ffi::OsStr::new("json")) {
+        // ingredient is a json file, load it directly and set the base path for any resources
         let json = std::fs::read_to_string(path)?;
         let mut ingredient: Ingredient = serde_json::from_slice(json.as_bytes())?;
         if let Some(base) = path.parent() {
             ingredient.resources_mut().set_base_path(base);
         }
-        Ok(ingredient)
+        if is_parent {
+            ingredient.set_relationship(c2pa::Relationship::ParentOf);
+        }
+        builder.add_ingredient(ingredient.clone());
+        Ok(())
     } else {
-        Ok(Ingredient::from_file(path)?)
+        // ingredient is a file, load it as an ingredient with a relationship
+        let mut file = File::open(path)?;
+        let format = format_from_path(path)
+            .ok_or_else(|| anyhow!("Could not determine format from path: {:?}", path))?;
+        let json = json!({
+            "relationship": if is_parent { c2pa::Relationship::ParentOf } else { c2pa::Relationship::ComponentOf },
+        }).to_string();
+        builder.add_ingredient_from_stream(json, &format, &mut file)?;
+        Ok(())
     }
 }
 
@@ -240,14 +295,88 @@ fn load_trust_resource(resource: &TrustResource) -> Result<String> {
     }
 }
 
-// This function will handle any specific trust settings that are provided via the command line.
-fn configure_sdk(args: &CliArgs) -> Result<()> {
-    const TA: &str = r#"{"trust": { "trust_anchors": replacement_val } }"#;
-    const AL: &str = r#"{"trust": { "allowed_list": replacement_val } }"#;
-    const TC: &str = r#"{"trust": { "trust_config": replacement_val } }"#;
-    const VS: &str = r#"{"verify": { "verify_after_sign": replacement_val } }"#;
+/// Load trust PEM/config sidecars from the same directory as `--settings`, if present.
+/// Returns whether any trust material was applied (for enabling `verify_trust`).
+fn apply_trust_sidecars(settings: &mut Settings, settings_path: &Path) -> Result<bool> {
+    let Some(dir) = settings_path.parent() else {
+        return Ok(false);
+    };
+    let mut applied = false;
 
-    let mut enable_trust_checks = false;
+    let official = dir.join(SIDECAR_TRUST_LIST_PEM);
+    if official.exists() {
+        let data = fs::read_to_string(&official)
+            .with_context(|| format!("read trust sidecar {}", official.display()))?;
+        settings.update_from_str(
+            &toml::toml! {
+                [trust]
+                trust_anchors = data
+            }
+            .to_string(),
+            "toml",
+        )?;
+        applied = true;
+    }
+
+    let legacy_pem = dir.join(SIDECAR_TRUST_LIST_LEGACY_PEM);
+    if legacy_pem.exists() {
+        let data = fs::read_to_string(&legacy_pem)
+            .with_context(|| format!("read legacy trust sidecar {}", legacy_pem.display()))?;
+        settings.update_from_str(
+            &toml::toml! {
+                [trust]
+                user_anchors = data
+            }
+            .to_string(),
+            "toml",
+        )?;
+        applied = true;
+    }
+
+    let store_cfg = dir.join(SIDECAR_TRUST_STORE_CFG);
+    if store_cfg.exists() {
+        let data = fs::read_to_string(&store_cfg)
+            .with_context(|| format!("read trust sidecar {}", store_cfg.display()))?;
+        settings.update_from_str(
+            &toml::toml! {
+                [trust]
+                trust_config = data
+            }
+            .to_string(),
+            "toml",
+        )?;
+        applied = true;
+    }
+
+    let allowed = dir.join(SIDECAR_TRUST_ALLOWED);
+    if allowed.exists() {
+        let data = fs::read_to_string(&allowed)
+            .with_context(|| format!("read trust sidecar {}", allowed.display()))?;
+        settings.update_from_str(
+            &toml::toml! {
+                [trust]
+                allowed_list = data
+            }
+            .to_string(),
+            "toml",
+        )?;
+        applied = true;
+    }
+
+    Ok(applied)
+}
+
+// This function will handle any specific trust settings that are provided via the command line.
+fn configure_sdk(args: &CliArgs) -> Result<Settings> {
+    let mut settings = if args.settings.exists() {
+        Settings::new().with_file(&args.settings)?
+    } else {
+        Settings::default()
+    };
+
+    let sidecar_trust = apply_trust_sidecars(&mut settings, &args.settings)?;
+
+    let mut enable_trust_checks = sidecar_trust;
 
     if let Some(Commands::Trust {
         trust_anchors,
@@ -256,61 +385,67 @@ fn configure_sdk(args: &CliArgs) -> Result<()> {
     }) = &args.command
     {
         if let Some(trust_list) = &trust_anchors {
-            let data = load_trust_resource(trust_list)?;
             debug!("Using trust anchors from {trust_list:?}");
-            let replacement_val = serde_json::Value::String(data).to_string(); // escape string
-            let setting = TA.replace("replacement_val", &replacement_val);
 
-            #[allow(deprecated)]
-            c2pa::settings::load_settings_from_str(&setting, "json")?;
+            let data = load_trust_resource(trust_list)?;
+            settings.update_from_str(
+                &toml::toml! {
+                    [trust]
+                    trust_anchors = data
+                }
+                .to_string(),
+                "toml",
+            )?;
 
             enable_trust_checks = true;
         }
 
         if let Some(allowed_list) = &allowed_list {
-            let data = load_trust_resource(allowed_list)?;
             debug!("Using allowed list from {allowed_list:?}");
-            let replacement_val = serde_json::Value::String(data).to_string(); // escape string
-            let setting = AL.replace("replacement_val", &replacement_val);
 
-            #[allow(deprecated)]
-            c2pa::settings::load_settings_from_str(&setting, "json")?;
+            let data = load_trust_resource(allowed_list)?;
+            settings.update_from_str(
+                &toml::toml! {
+                    [trust]
+                    allowed_list = data
+                }
+                .to_string(),
+                "toml",
+            )?;
 
             enable_trust_checks = true;
         }
 
         if let Some(trust_config) = &trust_config {
-            let data = load_trust_resource(trust_config)?;
             debug!("Using trust config from {trust_config:?}");
-            let replacement_val = serde_json::Value::String(data).to_string(); // escape string
-            let setting = TC.replace("replacement_val", &replacement_val);
 
-            #[allow(deprecated)]
-            c2pa::settings::load_settings_from_str(&setting, "json")?;
+            let data = load_trust_resource(trust_config)?;
+            settings.update_from_str(
+                &toml::toml! {
+                    [trust]
+                    trust_config = data
+                }
+                .to_string(),
+                "toml",
+            )?;
 
             enable_trust_checks = true;
         }
     }
 
-    // if any trust setting is provided enable the trust checks
+    // If trust material came from CLI or sidecars, enable trust checks (cannot disable defaults).
     if enable_trust_checks {
-        #[allow(deprecated)]
-        c2pa::settings::load_settings_from_str(r#"{"verify": { "verify_trust": true} }"#, "json")?;
-    } else {
-        #[allow(deprecated)]
-        c2pa::settings::load_settings_from_str(r#"{"verify": { "verify_trust": false} }"#, "json")?;
+        settings.update_from_str(
+            &toml::toml! {
+                [verify]
+                verify_trust = true
+            }
+            .to_string(),
+            "toml",
+        )?;
     }
 
-    // enable or disable verification after signing
-    {
-        let replacement_val = serde_json::Value::Bool(!args.no_signing_verify).to_string();
-        let setting = VS.replace("replacement_val", &replacement_val);
-
-        #[allow(deprecated)]
-        c2pa::settings::load_settings_from_str(&setting, "json")?;
-    }
-
-    Ok(())
+    Ok(settings)
 }
 
 // The file containing the injection attacks needs to be read line-by-line
@@ -565,7 +700,9 @@ fn output_file(
             .context("signing file")?;
 
         // generate a report on the output file
-        let reader = Reader::from_file(&output).map_err(special_errs)?;
+        let reader = Reader::from_shared_context(builder.context())
+            .with_file(&output)
+            .map_err(special_errs)?;
         if args.verbose {
             if args.detailed {
                 println!("{reader:#?}");
@@ -636,13 +773,14 @@ fn create_file(
 
     let config = args.config.clone();
 
-    let is_fragment = matches!(
-        &args.command,
-        Some(Commands::Fragment { fragments_glob: _ })
-    );
+    // let is_fragment = matches!(
+    //    &args.command,
+    //    Some(Commands::Fragment { fragments_glob: _ })
+    // );
 
     // configure the SDK
-    configure_sdk(args).context("Could not configure c2pa-rs")?;
+    let settings = configure_sdk(args).context("Could not configure c2pa-rs")?;
+    let context = Arc::new(C2paContext::new().with_settings(&settings)?);
 
     // if we have a manifest config, process it
     if args.manifest_file.is_some() || config.is_some() {
@@ -692,7 +830,9 @@ fn create_file(
             mal_string.clone(),
             args.verbose,
         )?;
-        let mut builder = Builder::from_json(&new_json)?;
+
+        let manifest_def: ManifestDef = serde_json::from_slice(json.as_bytes())?;
+        let mut builder = Builder::from_shared_context(&context).with_definition(&new_json)?;
 
         // The manfifest approach is no longer used because sign_file() was deprecated.
         // Instead, we will use the builder to create the manifest.
@@ -716,22 +856,21 @@ fn create_file(
             sign_config.set_base_path(base);
         }
 
-        // If we successfully have a manifest config, then proceed with creating attack files.
-        if let Some(parent_path) = &args.parent {
-            let mut ingredient = load_ingredient(parent_path)?;
-            ingredient.set_is_parent();
-            builder.add_ingredient(ingredient);
+        // Add any ingredients specified as file paths
+        if let Some(paths) = manifest_def.ingredient_paths {
+            for mut path in paths {
+                // ingredient paths are relative to the manifest path
+                if let Some(base) = &base_path {
+                    if !(path.is_absolute()) {
+                        path = base.join(&path)
+                    }
+                }
+                add_ingredient(&mut builder, &path, false)?;
+            }
         }
 
-        // If the source file has a manifest store, and no parent is specified treat the source as a parent.
-        // note: This could be treated as an update manifest eventually since the image is the same
-        let has_parent = builder.definition.ingredients.iter().any(|i| i.is_parent());
-        if !has_parent && !is_fragment {
-            let mut source_ingredient = Ingredient::from_file(&args.path)?;
-            if source_ingredient.manifest_data().is_some() {
-                source_ingredient.set_is_parent();
-                builder.add_ingredient(source_ingredient);
-            }
+        if let Some(parent_path) = &args.parent {
+            add_ingredient(&mut builder, parent_path, true)?
         }
 
         let result = output_file(
@@ -860,6 +999,7 @@ pub mod tests {
         let command: Option<Commands> = None;
         let parent: Option<PathBuf> = None;
         let field_type: String = String::from("title");
+        let settings: PathBuf = default_settings_path();
 
         let test_cli: CliArgs = CliArgs {
             path,
@@ -874,6 +1014,7 @@ pub mod tests {
             verbose,
             command,
             no_signing_verify,
+            settings,
         };
 
         let mut loop_index: i64 = 0;
@@ -910,6 +1051,7 @@ pub mod tests {
         let parent: Option<PathBuf> = None;
         let command: Option<Commands> = None;
         let field_type: String = String::from("regex");
+        let settings: PathBuf = default_settings_path();
 
         let test_cli: CliArgs = CliArgs {
             path,
@@ -924,6 +1066,7 @@ pub mod tests {
             verbose,
             command,
             no_signing_verify,
+            settings,
         };
 
         let mut loop_index: i64 = 0;
