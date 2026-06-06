@@ -780,7 +780,7 @@ fn create_file(
     // );
 
     // configure the SDK
-    let mut settings = configure_sdk(&args).context("Could not configure c2pa-rs")?;
+    let settings = configure_sdk(args).context("Could not configure c2pa-rs")?;
     let context = Arc::new(C2paContext::new().with_settings(&settings)?);
 
     // if we have a manifest config, process it
@@ -871,7 +871,7 @@ fn create_file(
         }
 
         if let Some(parent_path) = &args.parent {
-            add_ingredient(&mut builder, &parent_path, true)?
+            add_ingredient(&mut builder, parent_path, true)?
         }
 
         let result = output_file(
