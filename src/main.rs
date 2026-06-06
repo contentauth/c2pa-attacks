@@ -44,8 +44,7 @@ use etcetera::BaseStrategy;
 use log::debug;
 use regex::Regex;
 use serde::Deserialize;
-use serde_json::json;
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
 
 mod signer;
 // This is not used in the current implementation
