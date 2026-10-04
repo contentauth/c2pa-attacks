@@ -503,6 +503,7 @@ fn remove_existing_assertion(
         if entry == "assertions" {
             let mut vec = Vec::new();
             for assertion in map[entry].as_array().unwrap() {
+                #[allow(deprecated)]
                 if assertion["label"].eq(labels::CREATIVE_WORK) {
                     let data = assertion["data"].as_object().unwrap();
 
@@ -616,6 +617,7 @@ fn output_file(
     }
 
     if let Some(new_assertion) = new_creative_work {
+        #[allow(deprecated)]
         builder.add_assertion_json(CREATIVE_WORK, &new_assertion)?;
     }
 
