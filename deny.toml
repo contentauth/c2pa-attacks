@@ -14,7 +14,7 @@ targets = [
 
 [advisories]
 yanked = "deny"
-ignore = [[
+ignore = []
 # These are inherited from c2pa-sdk
 #  "RUSTSEC-2024-0370", # proc-macro-error
 #  { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained; accepted until 2027-02-15 while replacing direct and transitive dependencies" },
