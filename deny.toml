@@ -15,8 +15,8 @@ targets = [
 [advisories]
 yanked = "deny"
 ignore = [
-  "RUSTSEC-2023-0071", # rsa Marvin Attack: (https://jira.corp.adobe.com/browse/CAI-5104)
   "RUSTSEC-2024-0370", # proc-macro-error
+  { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained; accepted until 2027-02-15 while replacing direct and transitive dependencies" },
 ]
 
 [bans]
@@ -28,7 +28,6 @@ allow = [
   "BSD-2-Clause",
   "BSD-3-Clause",
   # "CC0-1.0",
-  "CDLA-Permissive-2.0",
   "ISC",
   # "LicenseRef-ring",
   "MIT",
@@ -36,6 +35,7 @@ allow = [
   "Unicode-3.0",
   # "Unicode-DFS-2016",
   "Zlib",
+  "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.9
 
