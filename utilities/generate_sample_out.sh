@@ -12,17 +12,18 @@
 # specific language governing permissions and limitations under
 # each license.
 
+set -euo pipefail
+
 # This script is designed to build all supported attacks based on the sample files.
 # It doesn't build variants using C.jpg or the malicious certificate by default.
 # These can be built used by changing the defaults using the command line.
 #
 # It is expected that this tool will be run from the root directory of the project.
-# ./scripts/generate_sample_out.sh {location_of_the_c2pa-attacks_binary_to_use}
+# ./utilities/generate_sample_out.sh {location_of_the_c2pa-attacks_binary_to_use}
 #
 # Not all combinations of malicious files can be built. This will result in a few known errors.
 # These errors will either mention a CBOR error or they will say that a file is being skipped.
-# These errors are expected and doesn't indicated a failure of the tool.
-# The errors are only displayed when the tool is in debugging mode.
+# Such failures are reported while the remaining batches are still attempted.
 
 # Whether to output debugging information
 debugging=false
@@ -30,7 +31,7 @@ debugging=false
 # The list of target locations where substitutions will occur
 # format and instance_id are not used in the current implementation and are temporarily removed
 # "instance_id" "format"
-target_fields=("title" "author" "person_identifier" "claim_generator" "vendor" "label" "regex")
+target_fields=("title" "cawg_author" "cawg_person_identifier" "author" "person_identifier" "claim_generator" "vendor" "label" "regex")
 
 # The location of the attack file directory.
 attack_dir="./attacks/"
@@ -41,7 +42,7 @@ attack_files=("rendering.attack" "special_characters.attack" "sql_injection.atta
 
 # The source JSON manifest file for non-regex use cases.
 # This uses the standard es256 certificate files from the sample directory
-source_json="./sample/test.json"
+source_json="./sample/cawg_metadata.json"
 
 # This manifest file is similar to test.json but it uses the malicious_certificate for signing.
 # It is not intended for the regex mode of c2pa-attacks
@@ -54,7 +55,7 @@ manifest_file="${source_json}"
 # The base JSON manifest file for use with the regex functionality.
 # This file has the string "C2PA_ATTACK" embedded within it.
 # The "C2PA_ATTACK" string will be replaced with the malicious string. 
-regex_test_file="./sample/author_name_regex.json"
+regex_test_file="./sample/cawg_author_regex.json"
 
 # The default output directory where newly created files will be placed.
 sample_out_dir="./sample_out/"
@@ -67,13 +68,13 @@ output_name="signed_image.jpg"
 source_image="./sample/image.jpg"
 
 # targets
-build_target="all"
+build_target="regex"
 
 # Display usage information when an unexpected or malformed flag is provided.
 usage() {
-    echo "USAGE: $(basename $0) [-d] [-m manifest_file] [-n output_file_name] [-o output_file_directory] [-s source_image]  binary_location" >&2
+    echo "USAGE: $(basename "$0") [-d] [-m manifest_file] [-n output_file_name] [-o output_file_directory] [-s source_image] binary_location" >&2
     echo "-d: Print debugging statements"
-    echo "-m: The location of a manifiest file for non-regex substitutions. (default: ${source_name})"
+    echo "-m: The location of a manifest file for non-regex substitutions. (default: ${manifest_file})"
     echo "-n: The ending to use for output file names. (default: ${output_name})"
     echo "-o: The output file directory. (default: ${sample_out_dir})"
     echo "-r: The location of the manifest file for regex substitutions. (default: ${regex_test_file})"
@@ -98,7 +99,7 @@ while getopts 'dm:n:o:r:s:t:' OPTION; do
         output_name="${OPTARG}"
     ;;
     o)
-        sample_out_dir=="${OPTARG}"
+        sample_out_dir="${OPTARG}"
     ;;
     r)
         regex_test_file="${OPTARG}"
@@ -123,18 +124,18 @@ while getopts 'dm:n:o:r:s:t:' OPTION; do
     ;;
     ?)
       usage
-      exit 0
+      exit 1
     ;;
   esac
 done
 
 # Reset $1 to the location of c2pa-attacks binary if necessary
-if [ $OPTIND -gt 0 ] ; then
+if [ "$OPTIND" -gt 0 ] ; then
     shift "$(($OPTIND - 1))"
 fi
 
 # Check for the location of the c2pa-attacks binary in $1
-if [ -z "$1" ] ; then
+if [ "$#" -eq 0 ] ; then
     echo "ERROR: Please supply the location of the c2pa-attacks binary to use for the builds"
     usage
     exit 1
@@ -144,11 +145,12 @@ fi
 binary_location="$1"
 
 # Verify that the path to the c2pa-attacks binary is valid
-if ! type "$binary_location" > /dev/null; then
+if [ ! -x "$binary_location" ] || [ -d "$binary_location" ]; then
     echo "ERROR: Unable to locate the provided location of the c2pa-attacks binary"
     echo "Please double check the path provided to ensure that it points to a valid location"
     exit 1
 fi
+binary_location="$(cd "$(dirname "$binary_location")" && pwd)/$(basename "$binary_location")"
 
 # Display debugging information on which files will be created
 if [ "$debugging" = true ] ; then
@@ -164,6 +166,7 @@ fi
 # Start creating the malicious files in the output directory.
 
 # For each of the listed attack files
+failures=0
 for attack_file in "${attack_files[@]}"; do
 
     ## For each of the target substitution locations
@@ -180,33 +183,41 @@ for attack_file in "${attack_files[@]}"; do
         fi
 
         # Build the command line with all of the appropriate values
-        command_line="${binary_location}  ${source_image}"
+        command_line=("$binary_location" "$source_image")
 
         if [ "${target_field}" = "regex" ]; then
-            command_line="${command_line} -m ${regex_test_file}"
+            command_line+=("-m" "$regex_test_file")
         else
-            command_line="${command_line} -m ${source_json}"
+            command_line+=("-m" "$manifest_file")
         fi
 
         # command_line="${command_line} -v"
-        command_line="${command_line} -o ${sample_out_dir}${output_name}"
-        command_line="${command_line} -t ${target_field}"
-        command_line="${command_line} -a ${attack_dir}${attack_file}"
-        command_line="${command_line} -f"
+        command_line+=("-o" "${sample_out_dir%/}/${output_name}")
+        command_line+=("-t" "$target_field")
+        command_line+=("-a" "${attack_dir}${attack_file}")
+        command_line+=("-f")
 
         # Show the complete command line when debugging
         if [ "$debugging" = true ] ; then
-            echo "DEBUG: ${command_line}"
+            printf 'DEBUG: %q ' "${command_line[@]}"
+            printf '\n'
         fi
 
         # Execute the command line and capture any errors
-        output=$(eval $command_line)
-
-        # Output errors from the command line
-        # This is only printed in debugging mode because some errors are expected in normal operation.
-        if [ -n "$output" ] && [ "$debugging" = true ] ; then
-            echo "${output}"
+        if output=$("${command_line[@]}"); then
+            if [ -n "$output" ] && [ "$debugging" = true ]; then
+                printf '%s\n' "$output"
+            fi
+        else
+            printf 'Failed target %s with %s:\n%s\n' "$target_field" "$attack_file" "$output" >&2
+            failures=$((failures + 1))
         fi
+
     done
 
 done
+
+if [ "$failures" -gt 0 ]; then
+    printf '%s batch(es) failed; other batches were still attempted.\n' "$failures" >&2
+    exit 1
+fi

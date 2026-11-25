@@ -423,9 +423,9 @@ checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "c2pa"
-version = "0.92.1"
+version = "0.92.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4caaefa6ebf384355a545ce1e2e7018c3db53bde513a0ee120a5170762b8c5af"
+checksum = "b2e0515be937264bf66d25269db4c6d89703e033ac5314e7613bc4de955284e2"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -4059,9 +4059,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.7"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f31141ce3fc3e300ae89b78c0dd67f9708061d1d2eda54b8209346fd6be9a92c"
+checksum = "293198dcebfb821155b5092ab94b5a82ff180eddd7241df3bd6e66a4ffd1a585"
 dependencies = [
  "rustls-pki-types",
 ]

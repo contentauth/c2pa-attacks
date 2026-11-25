@@ -12,17 +12,23 @@ There are some combinations that the script does not build. For instance, the `C
 | Flag | Description |
 |-----|-----|
 | `-d` | Enable the output of debugging information. |
-| `-m` | The JSON manifest file location for non-regex substitions. This is used in the `standard` and `all` target modes. Default: `./sample/test.json` |
+| `-m` | The JSON manifest file location for non-regex substitutions in `standard` and `all` modes. Default: `./sample/cawg_metadata.json` |
 | `-n` | The output file base name prior to being prefixed with attack details. Default: `signed_image.jpg` |
 | `-o` | The output directory for the newly created files. Default: `./sample_out/` |
-| `-r` | The location of the JSON manifest file for `regex` subsitutions. Default: `./sample/author_name_regex.json` | 
+| `-r` | The JSON manifest file for `regex` substitutions. Default: `./sample/cawg_author_regex.json` |
 | `-s` | The location of the source image file that will be altered. Default: `./sample/image.jpg` |
-| `-t` | The targeted manifest type. Allowed values are `all`, `standard`, and `regex`. Default: `all` |
+| `-t` | The targeted manifest type. Allowed values are `all`, `standard`, and `regex`. Default: `regex` |
 
-The `-t` flag allows you to either skip the usage of a regex manifest file or to only use a regex manifest file. This option is provided because regex substitions require a dedicated manifest file with a `C2PA_ATTACK` field specified where you want the injections to occur. The `standard` mode will work with any standard JSON manifest and inject into specification defined fields such as `author` and `title`. The default regex example file makes substitutions in the `author` field. The default setting of `all` will build both the `standard` variants using `test.json` and the `regex` variant using the `author_name_regex.json` manifest from the sample directory. However, you can modify this behavior using the command line flags. For instance, if you wanted to limit the tool to only create malicious files using your own custom regex manifest file, then you could specify the following command:
+The default is template-first CAWG metadata testing. The `regex` mode uses a JSON template with `C2PA_ATTACK` at the desired string location. Change the template to test other metadata fields or schemas without adding flags. Use `-r ./sample/cawg_person_identifier_regex.json` for identifiers or a custom template for Dublin Core metadata.
+
+The opt-in `standard` and `all` modes include `cawg_author`, `cawg_person_identifier`, claim-field targets, and the retained legacy `author`/`person_identifier` targets. The latter deliberately create CreativeWork assertions and print warnings; use a claim-v1 definition such as `sample/test.json` for legacy-specific testing. `all` also includes template batches. `-m` selects the definition used for non-template batches.
+
+For a custom template:
 
 `./utilities/generate_sample_out.sh -t regex -r {location_of_your_regex_manifest} {location_of_the_c2pa-attacks_binary}`
 
+The binary argument must be an executable file path (for example `./target/debug/c2pa-attacks` or `~/.cargo/bin/c2pa-attacks`). Arguments are passed literally, so file paths with spaces are supported; the script does not evaluate a shell command string. A failed batch is reported and other batches are still attempted, then the script exits unsuccessfully. Some attack strings intentionally violate SDK validation rules; those failures are not silently treated as successes.
+
 Anonther example customization of the command line might be to use the malicious certificate manifest definition which will sign the files with the default malicious certificate. Assuming that a locally installed c2pa-attacks binary will be used, the commmand would be as follows:
 
-`./utilities/generate_sample_out.sh -m ./sample/malicious_certificate.json ~/.cargo/bin/c2pa-attacks`
+`./utilities/generate_sample_out.sh -t standard -m ./sample/malicious_certificate.json ~/.cargo/bin/c2pa-attacks`

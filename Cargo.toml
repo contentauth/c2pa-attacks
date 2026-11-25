@@ -12,13 +12,13 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 keywords = ["c2pa", "xmp", "metadata"]
 edition = "2021"
-rust-version = "1.86.0"
+rust-version = "1.96.0"
 homepage = "https://contentauthenticity.org"
 repository = "https://github.com/contentauth/c2pa-attacks"
 
 [dependencies]
 anyhow = "1.0"
-c2pa = { version = "0.92.1", features = [
+c2pa = { version = "0.92.2", features = [
     "fetch_remote_manifests",
     "file_io",
     "add_thumbnails",

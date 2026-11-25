@@ -17,7 +17,6 @@
 /// ./sample/C.jpg  -m ./sample/test.json -o ./sample_out/C_mod.jpg \
 /// -f -t author -a ./attacks/xss.txt
 use std::{
-    collections::HashMap,
     fs::{create_dir_all, remove_file, File},
     io::{self, BufRead},
     path::{Path, PathBuf},
@@ -26,23 +25,18 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context, Result};
-// These are not used in the current implementation: ManifestDefinition, Manifest, and ManifestStore
-#[allow(deprecated)]
 use c2pa::{
-    assertions::{
-        labels::{self, CREATIVE_WORK},
-        CreativeWork, SchemaDotOrgPerson,
-    },
+    assertions::{labels, Metadata},
     format_from_path,
-    settings::Settings,
-    Builder, ClaimGeneratorInfo, Context as C2paContext, Error, Ingredient, ManifestDefinition,
-    Reader,
+    settings::{Settings, TrustAnchor},
+    Builder, ClaimGeneratorInfo, Context as C2paContext, Error, Ingredient, ManifestAssertionKind,
+    ManifestDefinition, Reader,
 };
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use env_logger::Env;
 use etcetera::BaseStrategy;
 use log::debug;
-use regex::Regex;
+use regex::{NoExpand, Regex};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 
@@ -59,6 +53,24 @@ const SIDECAR_TRUST_LIST_PEM: &str = "c2pa-trust-list.pem";
 const SIDECAR_TRUST_LIST_LEGACY_PEM: &str = "c2pa-trust-list-legacy.pem";
 const SIDECAR_TRUST_STORE_CFG: &str = "c2pa-trust-store.cfg";
 const SIDECAR_TRUST_ALLOWED: &str = "c2pa-trust-allowed.sha256.txt";
+const LEGACY_CREATIVE_WORK: &str = "stds.schema-org.CreativeWork";
+const SCHEMA_NAMESPACE: &str = "https://schema.org/";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+#[value(rename_all = "snake_case")]
+enum Target {
+    Author,
+    Title,
+    Format,
+    Label,
+    Vendor,
+    PersonIdentifier,
+    InstanceId,
+    ClaimGenerator,
+    Regex,
+    CawgAuthor,
+    CawgPersonIdentifier,
+}
 
 // This is not used in the current implementation
 /*
@@ -140,29 +152,22 @@ struct CliArgs {
     path: PathBuf,
 
     /// Path to manifest definition JSON file
-    #[arg(short = 'm', required = true)]
+    #[arg(
+        short = 'm',
+        long = "manifest",
+        required_unless_present = "config",
+        conflicts_with = "config"
+    )]
     manifest_file: Option<PathBuf>,
 
     /// Path to the output folder and base file name for the output
     #[arg(short = 'o', required = true)]
     output: Option<PathBuf>,
 
-    /// The target field to replace or indicating the use of regex mode
-    #[arg(
-        short = 't',
-        required = true,
-        value_parser = clap::builder::PossibleValuesParser::new([
-        "author",
-        "title",
-        "format",
-        "label",
-        "vendor",
-        "person_identifier",
-        "instance_id",
-        "claim_generator",
-        "regex"])
-    )]
-    target: Option<String>,
+    /// Target to mutate; use regex and a JSON template for arbitrary CAWG metadata.
+    /// author/person_identifier retain legacy CreativeWork behavior.
+    #[arg(short = 't', long, value_enum)]
+    target: Target,
 
     /// The file containing the attack strings to use
     #[arg(short = 'a', required = true)]
@@ -174,7 +179,7 @@ struct CliArgs {
     parent: Option<PathBuf>,
 
     /// Manifest definition passed as a JSON string
-    #[arg(short = 'c')]
+    #[arg(short = 'c', long, conflicts_with = "manifest_file")]
     config: Option<String>,
 
     /// Display detailed C2PA-formatted manifest data
@@ -307,14 +312,14 @@ fn apply_trust_sidecars(settings: &mut Settings, settings_path: &Path) -> Result
     if official.exists() {
         let data = fs::read_to_string(&official)
             .with_context(|| format!("read trust sidecar {}", official.display()))?;
-        settings.update_from_str(
-            &toml::toml! {
-                [trust]
-                trust_anchors = data
-            }
-            .to_string(),
-            "toml",
-        )?;
+        settings
+            .trust
+            .anchors
+            .get_or_insert_with(Vec::new)
+            .push(TrustAnchor {
+                trust_anchors: data,
+                ..Default::default()
+            });
         applied = true;
     }
 
@@ -322,14 +327,14 @@ fn apply_trust_sidecars(settings: &mut Settings, settings_path: &Path) -> Result
     if legacy_pem.exists() {
         let data = fs::read_to_string(&legacy_pem)
             .with_context(|| format!("read legacy trust sidecar {}", legacy_pem.display()))?;
-        settings.update_from_str(
-            &toml::toml! {
-                [trust]
-                user_anchors = data
-            }
-            .to_string(),
-            "toml",
-        )?;
+        settings
+            .trust
+            .anchors
+            .get_or_insert_with(Vec::new)
+            .push(TrustAnchor {
+                trust_anchors: data,
+                ..Default::default()
+            });
         applied = true;
     }
 
@@ -352,14 +357,14 @@ fn apply_trust_sidecars(settings: &mut Settings, settings_path: &Path) -> Result
     if allowed.exists() {
         let data = fs::read_to_string(&allowed)
             .with_context(|| format!("read trust sidecar {}", allowed.display()))?;
-        settings.update_from_str(
-            &toml::toml! {
-                [trust]
-                allowed_list = data
-            }
-            .to_string(),
-            "toml",
-        )?;
+        settings
+            .trust
+            .anchors
+            .get_or_insert_with(Vec::new)
+            .push(TrustAnchor {
+                allowed_list: Some(data),
+                ..Default::default()
+            });
         applied = true;
     }
 
@@ -388,14 +393,14 @@ fn configure_sdk(args: &CliArgs) -> Result<Settings> {
             debug!("Using trust anchors from {trust_list:?}");
 
             let data = load_trust_resource(trust_list)?;
-            settings.update_from_str(
-                &toml::toml! {
-                    [trust]
-                    trust_anchors = data
-                }
-                .to_string(),
-                "toml",
-            )?;
+            settings
+                .trust
+                .anchors
+                .get_or_insert_with(Vec::new)
+                .push(TrustAnchor {
+                    trust_anchors: data,
+                    ..Default::default()
+                });
 
             enable_trust_checks = true;
         }
@@ -404,14 +409,14 @@ fn configure_sdk(args: &CliArgs) -> Result<Settings> {
             debug!("Using allowed list from {allowed_list:?}");
 
             let data = load_trust_resource(allowed_list)?;
-            settings.update_from_str(
-                &toml::toml! {
-                    [trust]
-                    allowed_list = data
-                }
-                .to_string(),
-                "toml",
-            )?;
+            settings
+                .trust
+                .anchors
+                .get_or_insert_with(Vec::new)
+                .push(TrustAnchor {
+                    allowed_list: Some(data),
+                    ..Default::default()
+                });
 
             enable_trust_checks = true;
         }
@@ -458,33 +463,10 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-// Malicious strings may have double quotes or backslashes that need to be escaped for the JSON manifest. This function will take the injection string and escape any backslashes or double quotes that might be mistakenly interpreted by JSON.
-//
-// A trailing backslash needs to be escaped because it may be the last character in the string causing the double quote terminating the string to be escaped. Double quotes need to be escaped because they will conflict with existing JSON double quotes.
-//
-// This returns the injection string with the appropriate characters escaped.
 fn escape_malicious_string(mal_string: String) -> Result<String> {
-    // First escape any ending backslashes
-    // Only escape if the last backslash isn't already escaped.
-    let escaped_string: String = if mal_string.ends_with('\\') && !mal_string.ends_with("\\\\") {
-        let escape_backslash = Regex::new(r"(?P<a>\\)").unwrap();
-        let temp = escape_backslash
-            .replace_all(mal_string.as_str(), "\\\\")
-            .to_string();
-
-        // Next, add backslashes for any existing double quotes
-        let escape_d_quote = Regex::new(r#"(?P<a>")"#).unwrap();
-        escape_d_quote
-            .replace_all(temp.as_str(), r#"\""#)
-            .to_string()
-    } else {
-        // Add backslashes for any existing double quotes
-        let escape_d_quote = Regex::new(r#"(?P<a>")"#).unwrap();
-        escape_d_quote
-            .replace_all(mal_string.as_str(), r#"\""#)
-            .to_string()
-    };
-    Ok(escaped_string)
+    let encoded = serde_json::to_string(&mal_string)?;
+    // Remove only the enclosing quotes; retain all JSON string escaping.
+    Ok(encoded[1..encoded.len() - 1].to_owned())
 }
 
 // Remove any pre-existing assertion of the same type as the malicious assertion.
@@ -492,77 +474,134 @@ fn remove_existing_assertion(
     orig_json: String,
     field_type: String,
     verbose: bool,
-) -> HashMap<String, Value> {
-    let map: Map<String, Value> = serde_json::from_str(&orig_json).expect("failed to read file");
-
-    let blank_json: &str = "{}";
-    let mut new_json: HashMap<String, Value> =
-        serde_json::from_str(blank_json).expect("Couldn't create blank map");
-
-    for entry in map.keys() {
-        if entry == "assertions" {
-            let mut vec = Vec::new();
-            for assertion in map[entry].as_array().unwrap() {
-                #[allow(deprecated)]
-                if assertion["label"].eq(labels::CREATIVE_WORK) {
-                    let data = assertion["data"].as_object().unwrap();
-
-                    // Only push the value if it doesn't contain authorship information
-                    if !(data.contains_key("author") && field_type.eq("author")
-                        || (data.contains_key("author") && field_type.eq("person_identifier"))
-                        || (data.contains_key("creator") && field_type.eq("person_identifier")))
-                    {
-                        vec.push(assertion.clone());
-                    } else if verbose {
-                        println!("Dropping Creative Work from original source");
-                    }
-                } else {
-                    vec.push(assertion.clone());
-                }
-            }
-            new_json.insert("assertions".to_string(), Value::Array(vec));
-        } else {
-            new_json.insert(entry.to_string(), map[entry].clone());
-        }
+) -> Result<Map<String, Value>> {
+    let mut map: Map<String, Value> = serde_json::from_str(&orig_json)?;
+    if !matches!(field_type.as_str(), "author" | "person_identifier") {
+        return Ok(map);
     }
-
-    new_json
+    if let Some(assertions) = map.get_mut("assertions") {
+        let assertions = assertions
+            .as_array_mut()
+            .context("assertions must be an array")?;
+        assertions.retain(|assertion| {
+            let drop = assertion["label"] == LEGACY_CREATIVE_WORK
+                && (assertion["data"].get("author").is_some()
+                    || (field_type == "person_identifier"
+                        && assertion["data"].get("creator").is_some()));
+            if drop && verbose {
+                eprintln!("Dropping Creative Work from original source");
+            }
+            !drop
+        });
+    }
+    Ok(map)
 }
 
 // For attack types of author or person_identifier, we will create a new malicious
 // Creative Work assertion with the appropriate malicous fields.
-#[allow(deprecated)]
-fn malicious_creative_work(
-    field_type: String,
-    mal_string: &String,
-) -> Result<Option<CreativeWork>> {
-    #[allow(deprecated)]
-    let mut new_creative_work: Option<CreativeWork> = None;
-
-    if field_type.eq("author") {
-        #[allow(deprecated)]
-        let author = SchemaDotOrgPerson::new().set_name(mal_string.to_owned())?;
-        new_creative_work = Some(CreativeWork::new().add_author(author).expect("add_author"));
-    } else if field_type.eq("person_identifier") {
-        #[allow(deprecated)]
-        let cw_person = SchemaDotOrgPerson::new()
-            .set_name("Malicious User".to_owned())
-            .unwrap()
-            .set_identifier(mal_string.to_owned())
-            .unwrap()
-            .insert("@id".to_owned(), [mal_string.to_owned()].to_vec())
-            .unwrap();
-        new_creative_work = Some(
-            CreativeWork::new()
-                .add_author(cw_person.clone())
-                .expect("add_author")
-                // example of adding a different kind of person field
-                .insert("creator".to_owned(), cw_person)
-                .expect("insert"),
-        );
+fn malicious_creative_work(field_type: &str, mal_string: &str) -> Option<Value> {
+    let mut person = json!({"@type": "Person", "name": mal_string});
+    if field_type == "person_identifier" {
+        person["name"] = json!("Malicious User");
+        person["identifier"] = json!(mal_string);
+        person["@id"] = json!([mal_string]);
+    } else if field_type != "author" {
+        return None;
     }
+    let mut assertion = json!({
+        "@context": "http://schema.org/",
+        "@type": "CreativeWork",
+        "author": [person.clone()]
+    });
+    if field_type == "person_identifier" {
+        assertion["creator"] = person;
+    }
+    Some(assertion)
+}
 
-    Ok(new_creative_work)
+fn mutate_cawg_metadata(
+    definition: &mut Map<String, Value>,
+    field_type: &str,
+    mal_string: &str,
+) -> Result<()> {
+    let assertions = definition
+        .entry("assertions")
+        .or_insert_with(|| json!([]))
+        .as_array_mut()
+        .context("assertions must be an array")?;
+    let mut candidate = None;
+    for (index, assertion) in assertions.iter().enumerate() {
+        if let Some(label) = assertion["label"].as_str() {
+            let (base, version, _) = labels::parse_label(label);
+            if base == labels::CAWG_METADATA {
+                if version != 1 {
+                    bail!("Unsupported CAWG metadata version; use a tailored -t regex template");
+                }
+                if candidate.replace(index).is_some() {
+                    bail!("Multiple CAWG metadata assertions; use a tailored -t regex template");
+                }
+            }
+        }
+    }
+    let index = match candidate {
+        Some(index) => index,
+        None => {
+            assertions.push(json!({"label": labels::CAWG_METADATA, "data": {}}));
+            assertions.len() - 1
+        }
+    };
+    let assertion = &mut assertions[index];
+    let data = assertion["data"]
+        .as_object_mut()
+        .context("CAWG metadata data must be an object")?;
+    let context = data
+        .entry("@context")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .context("CAWG @context must be an object; use a tailored -t regex template")?;
+    if let Some(namespace) = context.get("schema") {
+        if namespace != SCHEMA_NAMESPACE {
+            bail!("Conflicting schema namespace; use a tailored -t regex template");
+        }
+    } else {
+        context.insert("schema".to_owned(), json!(SCHEMA_NAMESPACE));
+    }
+    let authors = data
+        .entry("schema:author")
+        .or_insert_with(|| json!([]))
+        .as_array_mut()
+        .context("schema:author must be an array; use a tailored -t regex template")?;
+    if authors.is_empty() {
+        authors.push(json!({"@type": "schema:Person"}));
+    }
+    let person = authors[0]
+        .as_object_mut()
+        .context("first schema:author must be a person object")?;
+    match person.get("@type") {
+        Some(person_type) if person_type != "schema:Person" => {
+            bail!("First schema:author must have type schema:Person; use a tailored -t regex template");
+        }
+        None => {
+            person.insert("@type".to_owned(), json!("schema:Person"));
+        }
+        _ => {}
+    }
+    let property = if field_type == "cawg_author" {
+        "schema:name"
+    } else {
+        person
+            .entry("schema:name")
+            .or_insert_with(|| json!("Malicious User"));
+        "schema:identifier"
+    };
+    person.insert(property.to_owned(), json!(mal_string));
+    let metadata = Metadata::new(labels::CAWG_METADATA, &serde_json::to_string(data)?)?;
+    if !metadata.is_valid() {
+        bail!("Invalid CAWG metadata namespaces; use a tailored -t regex template");
+    }
+    assertion["data"] = serde_json::to_value(metadata)?;
+    assertion["kind"] = serde_json::to_value(ManifestAssertionKind::Json)?;
+    Ok(())
 }
 
 /**
@@ -609,16 +648,8 @@ fn output_file(
     loop_index: &i64,
     testing_mode: bool,
 ) -> Result<()> {
-    #[allow(deprecated)]
-    let mut new_creative_work: Option<CreativeWork> = None;
-
-    if field_type.eq("author") || field_type.eq("person_identifier") {
-        new_creative_work = malicious_creative_work(field_type.clone(), mal_string).unwrap();
-    }
-
-    if let Some(new_assertion) = new_creative_work {
-        #[allow(deprecated)]
-        builder.add_assertion_json(CREATIVE_WORK, &new_assertion)?;
+    if let Some(new_assertion) = malicious_creative_work(&field_type, mal_string) {
+        builder.add_assertion_json(LEGACY_CREATIVE_WORK, &new_assertion)?;
     }
 
     if field_type.eq("title") {
@@ -697,9 +728,12 @@ fn output_file(
         output_dir.pop();
         create_dir_all(&output_dir)?;
 
-        builder
-            .sign_file(signer.as_ref(), args.path.clone(), output.clone())
-            .context("signing file")?;
+        if let Err(error) = builder.sign_file(signer.as_ref(), &args.path, &output) {
+            if output.exists() {
+                remove_file(&output).context("removing partial signed output")?;
+            }
+            return Err(error).context("signing file");
+        }
 
         // generate a report on the output file
         let reader = Reader::from_shared_context(builder.context())
@@ -724,18 +758,25 @@ fn create_manifest_def_as_string(
     verbose: bool,
 ) -> Result<String> {
     // Define the string that the regex mode will use to find and use to subsitute injection strings
-    let re: Regex = Regex::new(r"(?P<a>C2PA_ATTACK)").unwrap();
+    let re = Regex::new("C2PA_ATTACK")?;
 
     if re.is_match(json.as_str()) && field_type.eq("regex") {
-        let escaped_string: String = escape_malicious_string(mal_string).unwrap();
+        let escaped_string = escape_malicious_string(mal_string)?;
 
-        let after = re.replace_all(json.as_str(), escaped_string);
+        let after = re.replace_all(json.as_str(), NoExpand(&escaped_string));
+        serde_json::from_str::<Value>(&after).context("substituting manifest template")?;
 
         Ok(after.to_string())
     } else {
-        let new_map = remove_existing_assertion(json, field_type, verbose);
-        let new_string: String = serde_json::to_string(&new_map).unwrap();
-        Ok(new_string)
+        let mut new_map = remove_existing_assertion(json, field_type.clone(), verbose)?;
+        if matches!(
+            field_type.as_str(),
+            "cawg_author" | "cawg_person_identifier"
+        ) {
+            mutate_cawg_metadata(&mut new_map, &field_type, &mal_string)
+                .with_context(|| format!("preparing {field_type} attack"))?;
+        }
+        Ok(serde_json::to_string(&new_map)?)
     }
 }
 
@@ -800,7 +841,7 @@ fn create_file(
             }
             None => (
                 args.config.clone().unwrap_or_default(),
-                std::env::current_dir().ok(),
+                Some(std::env::current_dir().context("resolving inline manifest base path")?),
             ),
         };
 
@@ -875,7 +916,7 @@ fn create_file(
             add_ingredient(&mut builder, parent_path, true)?
         }
 
-        let result = output_file(
+        output_file(
             args,
             &mut builder,
             &sign_config,
@@ -883,23 +924,8 @@ fn create_file(
             &escaped_string,
             loop_index,
             testing_mode,
-        );
-        match result {
-            Ok(_v) => {
-                *loop_index += 1;
-            }
-            Err(e) => {
-                println!("Failed to process file: {e:?}");
-                let new_filename = create_output_file_name(args, field_type.clone(), loop_index);
-                println!("Removing file: {new_filename}");
-                if let Some(mut output) = args.output.clone() {
-                    output.pop();
-                    output.push(new_filename);
-                    fs::remove_file(output)?;
-                }
-                *loop_index += 1;
-            }
-        }
+        )?;
+        *loop_index += 1;
     }
     Ok(())
 }
@@ -910,28 +936,17 @@ fn main() -> Result<()> {
     // set RUST_LOG=debug to get detailed debug logging
     env_logger::Builder::from_env(Env::default().default_filter_or("error")).init();
 
-    // Verify command line flag for the target is one that is supported by this tool
-    let field_type: String = if let Some(target) = args.target.clone() {
-        let target_str = target.to_owned();
-        if target_str.ne("author")
-            && target_str.ne("title")
-            && target_str.ne("claim_generator")
-            && target_str.ne("regex")
-            && target_str.ne("person_identifier")
-            && target_str.ne("instance_id")
-            && target_str.ne("label")
-            && target_str.ne("format")
-            && target_str.ne("vendor")
-        {
-            bail!(
-                "Unrecognized field type. Allowed values: author, title, label, format, vendor, \
-                instance_id, claim_generator, person_identifier, or regex"
-            );
-        }
-        target
-    } else {
-        bail!("Field type not provided. Please add the '-t' flag.");
-    };
+    let target_value = args
+        .target
+        .to_possible_value()
+        .context("Missing target name")?;
+    let field_type = target_value.get_name().to_owned();
+    if matches!(args.target, Target::Author | Target::PersonIdentifier) {
+        eprintln!(
+            "WARNING: {field_type} creates deprecated CreativeWork metadata. Use \
+             cawg_{field_type} for CAWG metadata, or -t regex with a JSON template."
+        );
+    }
 
     if field_type.eq("instance_id") || field_type.eq("format") {
         println!(
@@ -946,7 +961,9 @@ fn main() -> Result<()> {
     // If we can successfully read the injection file path
     if let Ok(lines) = read_lines(args.attack_file.clone()) {
         // Consumes the iterator, returns an (Optional) String
-        for mal_string in lines.map_while(Result::ok) {
+        let mut failures = 0;
+        for mal_string in lines {
+            let mal_string = mal_string.context("reading attack string")?;
             let result = create_file(
                 field_type.clone(),
                 &mut loop_index,
@@ -958,11 +975,15 @@ fn main() -> Result<()> {
             match result {
                 Ok(_v) => {}
                 Err(e) => {
-                    println!("Failed to create file: {loop_index}");
-                    println!("Failed due to error: {e:?}");
+                    eprintln!("Failed to create file: {loop_index}");
+                    eprintln!("Failed due to error: {e:?}");
+                    failures += 1;
                     loop_index += 1;
                 }
             }
+        }
+        if failures > 0 {
+            bail!("Failed to create {failures} attack file(s)");
         }
     } else {
         bail!("ERROR: Could not find the attack injection file!");
@@ -980,6 +1001,447 @@ pub mod tests {
     use super::*;
     use crate::CliArgs;
 
+    fn mutated(template: &str, target: &str, payload: &str) -> Value {
+        serde_json::from_str(
+            &create_manifest_def_as_string(
+                template.to_owned(),
+                target.to_owned(),
+                payload.to_owned(),
+                false,
+            )
+            .unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn cli_args(extra: &[&str]) -> Result<CliArgs, clap::Error> {
+        let mut args = vec![
+            "c2pa-attacks",
+            "sample/image.jpg",
+            "-o",
+            "signed.jpg",
+            "-a",
+            "attacks/xss.attack",
+        ];
+        args.extend_from_slice(extra);
+        CliArgs::try_parse_from(args)
+    }
+
+    #[test]
+    fn test_cawg_cli_configuration_and_help() {
+        use clap::CommandFactory;
+
+        let from_file = cli_args(&[
+            "--manifest",
+            "sample/cawg_metadata.json",
+            "--target",
+            "cawg_author",
+        ])
+        .unwrap();
+        assert_eq!(from_file.target, Target::CawgAuthor);
+        let inline = cli_args(&["--config", "{}", "-t", "cawg_person_identifier"]).unwrap();
+        assert_eq!(inline.target, Target::CawgPersonIdentifier);
+        assert!(inline.manifest_file.is_none());
+        assert!(cli_args(&["-t", "regex"]).is_err());
+        assert!(cli_args(&["-m", "test.json", "-c", "{}", "-t", "regex"]).is_err());
+        assert!(cli_args(&["-m", "test.json", "-t", "unknown"]).is_err());
+        assert!(cli_args(&["-m", "test.json"]).is_err());
+        for legacy in ["author", "person_identifier", "title", "regex"] {
+            assert!(cli_args(&["-m", "test.json", "-t", legacy]).is_ok());
+        }
+        let help = CliArgs::command().render_long_help().to_string();
+        for name in [
+            "--target",
+            "--manifest",
+            "--config",
+            "cawg_author",
+            "cawg_person_identifier",
+        ] {
+            assert!(help.contains(name), "{help}");
+        }
+    }
+
+    #[test]
+    fn test_cawg_presets_preserve_other_data() {
+        let template = json!({
+            "claim_version": 2,
+            "title": "Keep",
+            "assertions": [
+                {"label": "my.assertion", "data": {"other": "Keep"}},
+                {"label": "cawg.metadata__1", "created": true, "data": {
+                    "@context": {"schema": SCHEMA_NAMESPACE, "dc": "http://purl.org/dc/elements/1.1/"},
+                    "dc:title": "Keep",
+                    "schema:author": [
+                        {"@type": "schema:Person", "schema:name": "First", "schema:identifier": "First ID"},
+                        {"@type": "schema:Person", "schema:name": "Second"}
+                    ]
+                }},
+                {"label": "cawg.training-mining", "data": {"entries": {}}}
+            ]
+        });
+        for (target, property) in [
+            ("cawg_author", "schema:name"),
+            ("cawg_person_identifier", "schema:identifier"),
+        ] {
+            let payload = "literal $1 \"value\" \\ \u{0} \u{00e9}";
+            let result = mutated(&template.to_string(), target, payload);
+            let mut expected = template.clone();
+            expected["assertions"][1]["data"]["schema:author"][0][property] = json!(payload);
+            expected["assertions"][1]["kind"] = json!("Json");
+            assert_eq!(result, expected);
+        }
+        let added = mutated(
+            r#"{"assertions":[]}"#,
+            "cawg_person_identifier",
+            "not a URL",
+        );
+        assert_eq!(added["assertions"][0]["label"], labels::CAWG_METADATA);
+        assert_eq!(
+            added["assertions"][0]["data"]["schema:author"][0]["schema:identifier"],
+            "not a URL"
+        );
+        assert_eq!(
+            added["assertions"][0]["data"]["schema:author"][0]["schema:name"],
+            "Malicious User"
+        );
+    }
+
+    #[test]
+    fn test_cawg_presets_reject_ambiguous_or_incompatible_input() {
+        for template in [
+            json!({"assertions": [
+                {"label":"cawg.metadata","data":{}},
+                {"label":"cawg.metadata__1","data":{}}
+            ]}),
+            json!({"assertions":[{"label":"cawg.metadata.v2","data":{}}]}),
+            json!({"assertions":[{"label":"cawg.metadata","data":{
+                "@context":{"schema":"https://example.com/conflict"}
+            }}]}),
+            json!({"assertions":[{"label":"cawg.metadata","data":{
+                "schema:author":"not an array"
+            }}]}),
+            json!({"assertions":[{"label":"cawg.metadata","data":{
+                "schema:author":[{"@type":"schema:Organization"}]
+            }}]}),
+        ] {
+            let error = create_manifest_def_as_string(
+                template.to_string(),
+                "cawg_author".to_owned(),
+                "payload".to_owned(),
+                false,
+            )
+            .unwrap_err();
+            assert!(format!("{error:#}").contains("regex"), "{error:#}");
+        }
+    }
+
+    #[test]
+    fn test_cawg_templates_preserve_literal_payload_and_support_other_schemas() {
+        let template = json!({
+            "assertions": [{
+                "label": "cawg.metadata", "kind": "Json", "data": {
+                    "@context": {"dc":"http://purl.org/dc/elements/1.1/"},
+                    "dc:creator": ["C2PA_ATTACK", "Other"],
+                    "dc:description": {"nested": "prefix C2PA_ATTACK suffix"},
+                    "C2PA_ATTACK": "Keep"
+                }
+            }]
+        });
+        for payload in ["$1 ${name} $$", "\"quote\" \\path\\", "\u{0}\t\n\u{00e9}"] {
+            let result = mutated(&template.to_string(), "regex", payload);
+            let data = &result["assertions"][0]["data"];
+            assert_eq!(data["dc:creator"], json!([payload, "Other"]));
+            assert_eq!(
+                data["dc:description"]["nested"],
+                format!("prefix {payload} suffix")
+            );
+            assert_eq!(data[payload], "Keep");
+            assert_eq!(
+                data["@context"],
+                template["assertions"][0]["data"]["@context"]
+            );
+        }
+        let unchanged = json!({"title":"No marker","assertions":[]});
+        assert_eq!(mutated(&unchanged.to_string(), "regex", "$1"), unchanged);
+    }
+
+    #[test]
+    fn test_legacy_creative_work_output_and_cleanup() {
+        let payload = "\"name\"\\";
+        assert_eq!(
+            malicious_creative_work("author", payload).unwrap(),
+            json!({
+                "@context":"http://schema.org/", "@type":"CreativeWork",
+                "author":[{"@type":"Person","name":payload}]
+            })
+        );
+        let person = json!({
+            "@type":"Person","name":"Malicious User","identifier":payload,"@id":[payload]
+        });
+        assert_eq!(
+            malicious_creative_work("person_identifier", payload).unwrap(),
+            json!({
+                "@context":"http://schema.org/","@type":"CreativeWork",
+                "author":[person.clone()],"creator":person
+            })
+        );
+        let template = include_str!("../sample/test.json");
+        let cleaned = mutated(template, "author", payload);
+        assert!(cleaned["assertions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|assertion| assertion["label"] != LEGACY_CREATIVE_WORK));
+        assert_eq!(
+            mutated(template, "title", payload),
+            serde_json::from_str::<Value>(template).unwrap()
+        );
+        let ca = mutated(template, "cawg_author", payload);
+        assert_eq!(ca["assertions"][0]["label"], LEGACY_CREATIVE_WORK);
+    }
+
+    #[test]
+    fn test_cawg_file_and_inline_resource_configuration() {
+        let temp = tempfile::tempdir().unwrap();
+        let template = temp.path().join("template.json");
+        fs::write(
+            temp.path().join("es256_private.key"),
+            include_bytes!("../sample/es256_private.key"),
+        )
+        .unwrap();
+        fs::write(
+            temp.path().join("es256_certs.pem"),
+            include_bytes!("../sample/es256_certs.pem"),
+        )
+        .unwrap();
+        fs::write(&template, include_str!("../sample/cawg_author_regex.json")).unwrap();
+        let mut file_args = cli_args(&["-m", template.to_str().unwrap(), "-t", "regex"]).unwrap();
+        file_args.settings = temp.path().join("settings.toml");
+        file_args.output = Some(temp.path().join("output.jpg"));
+        let mut index = 0;
+        create_file(
+            "regex".to_owned(),
+            &mut index,
+            "$1".to_owned(),
+            &file_args,
+            true,
+        )
+        .unwrap();
+        assert_eq!(index, 1);
+
+        let mut definition: Value =
+            serde_json::from_str(include_str!("../sample/cawg_author_regex.json")).unwrap();
+        definition["private_key"] = json!(temp.path().join("es256_private.key"));
+        definition["sign_cert"] = json!(temp.path().join("es256_certs.pem"));
+        let mut inline_args = cli_args(&["-c", &definition.to_string(), "-t", "regex"]).unwrap();
+        inline_args.settings = file_args.settings.clone();
+        inline_args.output = file_args.output.clone();
+        create_file(
+            "regex".to_owned(),
+            &mut index,
+            "$1".to_owned(),
+            &inline_args,
+            true,
+        )
+        .unwrap();
+        assert_eq!(index, 2);
+    }
+
+    #[test]
+    fn test_cawg_and_legacy_signed_round_trip() {
+        // Existing public development fixtures; no timestamp request or external signer.
+        let signer = c2pa::create_signer::from_keys(
+            include_bytes!("../sample/es256_certs.pem"),
+            include_bytes!("../sample/es256_private.key"),
+            c2pa::SigningAlg::Es256,
+            None,
+        )
+        .unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let mut settings = Settings::new();
+        // Trust only the existing development fixture locally; do not bypass signature checks.
+        settings
+            .update_from_str(
+                &json!({
+                    "trust": {"anchors": [{
+                        "trust_anchors": "",
+                        "trust_kind": "manifest",
+                        "allowed_list": include_str!("../sample/es256_certs.pem")
+                    }]},
+                    "verify": {"verify_trust": true}
+                })
+                .to_string(),
+                "json",
+            )
+            .unwrap();
+        let context = Arc::new(C2paContext::new().with_settings(&settings).unwrap());
+        let payload = "literal $1 \"name\" \\path\\ \u{00e9}";
+        for (target, label, property) in [
+            ("cawg_author", labels::CAWG_METADATA, "schema:name"),
+            (
+                "cawg_person_identifier",
+                labels::CAWG_METADATA,
+                "schema:identifier",
+            ),
+            ("author", LEGACY_CREATIVE_WORK, "name"),
+            ("person_identifier", LEGACY_CREATIVE_WORK, "identifier"),
+            ("regex", labels::CAWG_METADATA, "schema:name"),
+        ] {
+            let template = if label == LEGACY_CREATIVE_WORK {
+                include_str!("../sample/test.json")
+            } else if target == "regex" {
+                include_str!("../sample/cawg_author_regex.json")
+            } else {
+                include_str!("../sample/cawg_metadata.json")
+            };
+            let definition = create_manifest_def_as_string(
+                template.to_owned(),
+                target.to_owned(),
+                payload.to_owned(),
+                false,
+            )
+            .unwrap();
+            let mut builder = Builder::from_shared_context(&context)
+                .with_definition(&definition)
+                .unwrap();
+            if let Some(legacy) = malicious_creative_work(target, payload) {
+                builder
+                    .add_assertion_json(LEGACY_CREATIVE_WORK, &legacy)
+                    .unwrap();
+            }
+
+            let output = temp.path().join(format!("{target}.jpg"));
+            builder
+                .sign_file(signer.as_ref(), "sample/image.jpg", &output)
+                .unwrap();
+            let reader = Reader::from_shared_context(&context)
+                .with_file(&output)
+                .unwrap();
+            assert_eq!(reader.validation_state(), c2pa::ValidationState::Trusted);
+            let assertions = reader.active_manifest().unwrap().assertions();
+            let assertion = assertions
+                .iter()
+                .find(|assertion| labels::base(assertion.label()) == label)
+                .unwrap();
+            assert_eq!(assertion.kind(), &ManifestAssertionKind::Json);
+            let data = assertion.value().unwrap();
+            let authors = if label == LEGACY_CREATIVE_WORK {
+                "author"
+            } else {
+                "schema:author"
+            };
+            assert_eq!(data[authors][0][property], payload);
+            assert_eq!(
+                assertions
+                    .iter()
+                    .filter(|assertion| labels::base(assertion.label()) == label)
+                    .count(),
+                1
+            );
+            if label == labels::CAWG_METADATA {
+                assert!(assertions
+                    .iter()
+                    .all(|assertion| assertion.label() != LEGACY_CREATIVE_WORK));
+            }
+        }
+    }
+
+    #[test]
+    fn test_sdk_trust_sidecars_preserve_configured_anchors() {
+        let temp = tempfile::tempdir().unwrap();
+        let original = TrustAnchor {
+            trust_kind: c2pa::settings::TrustListKind::CAWG,
+            trust_uri: Some("https://example.org/test-cawg-trust".to_owned()),
+            ..Default::default()
+        };
+        let mut settings = Settings::new();
+        settings.trust.anchors = Some(vec![original.clone()]);
+        let settings_path = temp.path().join("settings.json");
+        fs::write(&settings_path, serde_json::to_string(&settings).unwrap()).unwrap();
+        let cert = include_str!("../sample/es256_certs.pem");
+        for name in [
+            SIDECAR_TRUST_LIST_PEM,
+            SIDECAR_TRUST_LIST_LEGACY_PEM,
+            SIDECAR_TRUST_ALLOWED,
+        ] {
+            fs::write(temp.path().join(name), cert).unwrap();
+        }
+        let mut args = cli_args(&["-m", "sample/cawg_metadata.json", "-t", "cawg_author"]).unwrap();
+        args.settings = settings_path;
+        let loaded = configure_sdk(&args).unwrap();
+        assert_eq!(
+            serde_json::to_value(&loaded).unwrap()["verify"]["verify_trust"],
+            true
+        );
+        let anchors = loaded.trust.anchors.as_ref().unwrap();
+        assert_eq!(anchors.len(), 4);
+        assert_eq!(anchors[0], original);
+        assert_eq!(anchors[1].trust_anchors, cert);
+        assert_eq!(anchors[2].trust_anchors, cert);
+        assert_eq!(anchors[3].allowed_list.as_deref(), Some(cert));
+        assert!(anchors[1..]
+            .iter()
+            .all(|anchor| anchor.trust_kind == c2pa::settings::TrustListKind::Manifest));
+        C2paContext::new().with_settings(&loaded).unwrap();
+    }
+
+    #[test]
+    fn test_sdk_trust_cli_uses_manifest_entries() {
+        let temp = tempfile::tempdir().unwrap();
+        let cert = include_str!("../sample/es256_certs.pem");
+        let certificate_path = temp.path().join("certificate.pem");
+        fs::write(&certificate_path, cert).unwrap();
+        let mut args = cli_args(&["-m", "sample/cawg_metadata.json", "-t", "cawg_author"]).unwrap();
+        args.settings = temp.path().join("settings.json");
+        args.command = Some(Commands::Trust {
+            trust_anchors: Some(TrustResource::File(certificate_path.clone())),
+            allowed_list: Some(TrustResource::File(certificate_path)),
+            trust_config: None,
+        });
+        let loaded = configure_sdk(&args).unwrap();
+        assert_eq!(
+            serde_json::to_value(&loaded).unwrap()["verify"]["verify_trust"],
+            true
+        );
+        let anchors = loaded.trust.anchors.as_ref().unwrap();
+        assert_eq!(anchors.len(), 2);
+        assert_eq!(anchors[0].trust_anchors, cert);
+        assert_eq!(anchors[1].allowed_list.as_deref(), Some(cert));
+        assert!(anchors
+            .iter()
+            .all(|anchor| anchor.trust_kind == c2pa::settings::TrustListKind::Manifest));
+        C2paContext::new().with_settings(&loaded).unwrap();
+    }
+
+    #[test]
+    fn test_cawg_failed_output_preserves_existing_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut args = cli_args(&[
+            "-c",
+            include_str!("../sample/cawg_metadata.json"),
+            "-t",
+            "cawg_author",
+        ])
+        .unwrap();
+        args.settings = temp.path().join("settings.toml");
+        args.output = Some(temp.path().join("output.jpg"));
+        let existing =
+            temp.path()
+                .join(create_output_file_name(&args, "cawg_author".to_owned(), &0));
+        fs::write(&existing, b"do not delete").unwrap();
+        let mut index = 0;
+        assert!(create_file(
+            "cawg_author".to_owned(),
+            &mut index,
+            "name".to_owned(),
+            &args,
+            false
+        )
+        .is_err());
+        assert_eq!(fs::read(existing).unwrap(), b"do not delete");
+        assert_eq!(index, 0);
+    }
+
     #[test]
     // Perform a unit test of injecting an XSS string in the title.
     // This will not create any files.
@@ -990,8 +1452,7 @@ pub mod tests {
         let output_temp: Result<PathBuf, ()> =
             Ok([r"sample_out", "signed_image.jpg"].iter().collect());
         let output: Option<PathBuf> = output_temp.ok();
-        let target_temp: Result<String, ()> = Ok(String::from("title"));
-        let target: Option<String> = target_temp.ok();
+        let target = Target::Title;
         let config: Option<String> = None;
         let attack_file: String = String::from("attacks/xss.attack");
         let detailed: bool = false;
@@ -1001,7 +1462,8 @@ pub mod tests {
         let command: Option<Commands> = None;
         let parent: Option<PathBuf> = None;
         let field_type: String = String::from("title");
-        let settings: PathBuf = default_settings_path();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let settings = temp_dir.path().join("settings.toml");
 
         let test_cli: CliArgs = CliArgs {
             path,
@@ -1042,8 +1504,7 @@ pub mod tests {
         let output_temp: Result<PathBuf, ()> =
             Ok([r"sample_out", "signed_image.jpg"].iter().collect());
         let output: Option<PathBuf> = output_temp.ok();
-        let target_temp: Result<String, ()> = Ok(String::from("regex"));
-        let target: Option<String> = target_temp.ok();
+        let target = Target::Regex;
         let config: Option<String> = None;
         let attack_file: String = String::from("attacks/xss.attack");
         let detailed: bool = false;
@@ -1053,7 +1514,8 @@ pub mod tests {
         let parent: Option<PathBuf> = None;
         let command: Option<Commands> = None;
         let field_type: String = String::from("regex");
-        let settings: PathBuf = default_settings_path();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let settings = temp_dir.path().join("settings.toml");
 
         let test_cli: CliArgs = CliArgs {
             path,

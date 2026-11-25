@@ -4,6 +4,7 @@
 - [Supported target values](#supported-target-values)
   - [Direct substitution](#direct-substitution)
   - [Regex substitution](#regex-substitution)
+- [CAWG metadata and legacy testing](#cawg-metadata-and-legacy-testing)
 - [Creating attack files](#creating-attack-files)
 - [Providing a manifest definition on the command line](#providing-a-manifest-definition-on-the-command-line)
 - [Adding a manifest to an asset file](#adding-a-manifest-to-an-asset-file)
@@ -25,10 +26,10 @@ The following table describes the command-line options.
 
 | CLI&nbsp;option&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Short version | Argument | Description |
 |-----|----|----|----|
-| `--target` | `-t` | `<target>` | Specifies the target value for injection. One of: `title`, `author`, `claim_generator`, `person_identifier`, `vendor`, `label`, `instance_id`, `format`, or `regex`. See [Supported target values](#supported-target-values). |
+| `--target` | `-t` | `<target>` | One of: `title`, `cawg_author`, `cawg_person_identifier`, `author`, `claim_generator`, `person_identifier`, `vendor`, `label`, `instance_id`, `format`, or `regex`. Prefer `regex` templates for broader CAWG coverage. |
 | `--attack_file` | `-a` | `<attack_file>` | Specifies the file with the list of injections. See [Creating attack files](#creating-attack-files). |
-| `--config` | `-c` | `<config>` | Specifies a manifest definition as a JSON string. See [Providing a manifest definition on the command line](#providing-a-manifest-definition-on-the-command-line). |
-| `--manifest` | `-m` | `<manifest_file>` | Specifies a manifest file to add to an asset file. See [Adding a manifest to an asset file](#adding-a-manifest-to-an-asset-file).
+| `--config` | `-c` | `<config>` | Manifest definition as a JSON string; mutually exclusive with `--manifest`. |
+| `--manifest` | `-m` | `<manifest_file>` | Manifest definition file; provide exactly one of this or `--config`. |
 | `--parent` | `-p` | `<parent_file>` | Specifies the path to the parent file. See [Specifying a parent file](#specifying-a-parent-file). |
 | `--no_signing_verify` | None | N/A |  Do not validate the signature after signing an asset, which speeds up signing. See [Speeding up signing](#speeding-up-signing) |
 | `--output` | `-o` | `<output_file>` | Specifies the path and title for the output files. See [Displaying manifest data](#adding-a-manifest-to-an-asset-file). |
@@ -48,13 +49,15 @@ The tool can inject malicious strings into manfiests before signing in two ways,
 
 This was the simplest approach when the c2pa-attacks tool was first created. Although, as the C2PA specification and the Rust SDK matured, this approach became less relevant. In most cases, the Regex subsitution is the better approach. Although, several of these options are still usable.
 
-This approach is an easy way to start testing the most common fields without understanding JSON manifests.  The injections in this approach are done after the JSON file has been imported and turned into a manifest structure in memory. As noted below, some of these options are no longer relevant due to changes in the SDK.
+This approach is an easy way to start testing common fields. CAWG presets mutate the JSON definition before SDK import; the legacy presets and claim-field mutations use the Builder before signing. As noted below, some options are no longer relevant due to changes in the SDK.
 
 This command line option only accepts one value as an argument.
 
 | Argument value | Description | Example value in `test.json` |
 |----------------|-------------|------------------------------|
 | `title` | The title field for the image. | "My Title" |
+| `cawg_author` | Sets `schema:author[0].schema:name` in a JSON `cawg.metadata` assertion. | "Content Creator" |
+| `cawg_person_identifier` | Sets `schema:author[0].schema:identifier` in `cawg.metadata`; does not enforce URL syntax or alter `@id`. | "https://example.com/creator" |
 | `author` | The author name within the Creative Work assertion. NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification, but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | "Content Creator" |
 | `person_identifier` | With the Creative Work assertion, this refers to the Creative Work's URL identifier for that SchemaDotOrg Person entry. For further information, see [C2PA Technical Specification](https://c2pa.org/specifications/specifications/1.4/specs/C2PA_Specification.html#_use_of_schema_org). NOTE: The CreativeWork assertion was dropped from version 2.0 of the C2PA specification but it will still be displayed by implementations that are backwards compatible with the 1.0 version. | N/A |
 | `claim_generator` | The claim generator field in the manifest. | "TestApp" |
@@ -67,7 +70,60 @@ This command line option only accepts one value as an argument.
 
 If the target value is `regex`, then tool searches the JSON manifest file for the string, "C2PA_ATTACK" and replaces all occurrences of it with the malicious string before embedding the assertion into the file.  The advantage of this approach is that you can inject malicous strings into any field of the manifest file including custom fields. However, for unit testing, you would likely only want one "C2PA_ATTACK" string per manifest file.
 
-Since the tool injects malicious values into a JSON string, any trailing backslashes or quotes are automatically escaped to ensure the manifest is valid JSON. In addition, the [Serde serialization framework](https://serde.rs/) checks for control characters (0x00 - 0x32) and throws an error if it detects them; see [serde_json's escape logic](https://github.com/serde-rs/json/blob/master/src/read.rs#L787). Therefore, these types of character injections are not allowed in the regex workflow. A future release will add a feature to inject these characters just before signing the file.
+Payloads are JSON-string-escaped using Serde, including quotes, backslashes, and control characters. Dollar signs are literal, not replacement-group references. Place markers inside JSON strings (including string keys); this mode does not insert raw JSON objects or code. Every occurrence is replaced, so use one marker to isolate a field. Each attack-file line is a separate payload; line separators are not part of it.
+
+## CAWG metadata and legacy testing
+
+SDK 0.92.2 no longer exports the legacy `CREATIVE_WORK` label constant. The tool retains `author` and `person_identifier` as explicit legacy CreativeWork testing modes and prints a warning; existing invocations are not silently converted. Schema.org assertions were already deprecated in [C2PA 1.4](https://spec.c2pa.org/specifications/specifications/1.4/specs/C2PA_Specification.html#_use_of_schema_org).
+
+For current metadata tests, use [CAWG Metadata 1.1](https://cawg.io/metadata/1.1/#_assertion_definition): the assertion label is `cawg.metadata`, its content is JSON, and its `@context` maps schema prefixes to namespaces. This is **metadata testing, not signed CAWG Identity testing**; an author name or identifier does not prove control over an identity.
+
+### Template-first configuration
+
+As in c2patool, the ordinary SDK manifest definition configures the job: assertion data, schemas, ingredients, claim version, and development signing configuration. Use `-m/--manifest` for a file or `-c/--config` for inline JSON, never both. Resource paths in files resolve relative to the manifest file; inline resource paths resolve relative to the current directory. The tool adds attack substitution and one output per payload to the SDK Builder/signing workflow, not a separate CAWG configuration format.
+
+```shell
+c2pa-attacks sample/image.jpg \
+  -m sample/cawg_author_regex.json -t regex \
+  -a attacks/xss.attack -o sample_out/cawg.jpg
+```
+
+Use `sample/cawg_person_identifier_regex.json` to target identifiers. To target another metadata field, edit the template rather than add CLI flags. For example, this assertion tests Dublin Core creators with the same `-t regex` mode:
+
+```json
+{
+  "label": "cawg.metadata",
+  "kind": "Json",
+  "data": {
+    "@context": { "dc": "http://purl.org/dc/elements/1.1/" },
+    "dc:creator": ["C2PA_ATTACK"]
+  }
+}
+```
+
+Include it in a normal manifest definition with the appropriate creation/opening actions and signing configuration. This requires no Dublin Core preset. Other CAWG assertions, such as training/mining, can be supplied through compatible definitions; template flexibility alone does not supply the credential/signature workflow required for CAWG Identity.
+
+### Two convenience presets
+
+```shell
+c2pa-attacks sample/image.jpg \
+  -m sample/cawg_metadata.json --target cawg_author \
+  -a attacks/xss.attack -o sample_out/cawg.jpg
+```
+
+Replace the target with `cawg_person_identifier` for identifier tests. These presets use `@context: {"schema": "https://schema.org/"}` and the first `schema:Person` in `schema:author`. If no CAWG metadata assertion exists, one is added; absent author/person data is created. Existing unrelated assertions, namespaces, properties, later authors, and claim-version settings are preserved. The identifier preset supplies `"Malicious User"` only if the name is missing.
+
+Multiple CAWG metadata assertions, unsupported assertion versions, conflicting `schema` mappings, or incompatible first-author shapes produce an error suggesting a tailored regex template. The presets do not convert alternate JSON-LD schemas or layouts. CAWG does not mandate these particular Schema.org fields.
+
+Legacy regression testing remains explicit:
+
+```shell
+c2pa-attacks sample/image.jpg \
+  -m sample/test.json -t author \
+  -a attacks/xss.attack -o sample_out/legacy.jpg
+```
+
+The legacy `person_identifier` target continues to inject into `identifier`, `@id`, and `creator`. New CAWG identifier presets target only `schema:identifier`; use templates for alternate locations. Output filename prefixes distinguish `cawg_author`, `cawg_person_identifier`, and legacy targets. If any payload fails, the batch continues but exits unsuccessfully, reporting the failures.
 
 ## Creating attack files
 
@@ -85,16 +141,17 @@ To provide the manifest definition in a command line argument instead of a file,
 For example, the following command adds a custom assertion called "org.contentauth.test".
 
 ```shell
-c2pa-attacks sample/image.json \
--c '{"assertions": [{"label": "org.contentauth.test", "data": {"my_key": "C2PA_ATTACK"}}]}' \
+c2pa-attacks sample/image.jpg \
+-c '{"claim_version":2,"assertions":[{"label":"c2pa.actions.v2","data":{"actions":[{"action":"c2pa.created","digitalSourceType":"http://cv.iptc.org/newscodes/digitalsourcetype/computationalCapture"}]}},{"label":"org.contentauth.test","data":{"my_key":"C2PA_ATTACK"}}]}' \
 -t regex \
--a attacks/xss.attack
+-a attacks/xss.attack \
+-o sample_out/custom.jpg
 ```
 
 ## Adding a manifest to an asset file
 
 To add manifest data to a file, provide the path to the asset file to be signed and use the `--manifest` / `-m` option with a manifest JSON file as the option argument. The sample directory contains examples for both version 1 (`test.json`) and version 2 (`test_claim_v2.json`) claim manifests. Next, use the `--output` / `-o` option to specify the desired location and name suffix for the output files.
-If you do not use the `--output` / `-o` option, then the tool will not generate any output.
+The `-o` option is required.
 The tool will put all of the manipulated file in the same folder as the image specified in the output flag. 
 
 CAUTION: If the output file is the same as the source file, the tool will overwrite the source file. 
@@ -147,6 +204,27 @@ c2pa-attacks sample/image.jpg \
 By default, `c2patool` validates the signature immediately after signing a manifest. To disable this and speed up the validation process, use the `--no_signing_verify` option.
 
 ## Configuring trust support
+
+SDK 0.92 removes the old top-level `trust.trust_anchors` and `trust.user_anchors` fields. The tool's existing trust options and sidecar files now populate SDK `trust.anchors` entries of kind `manifest`, preserving other configured entries and enabling trust verification. Metadata testing does not grant trust to CAWG Identity credentials.
+
+When supplying SDK settings directly, use the current format (PEM values omitted below):
+
+```json
+{
+  "trust": {
+    "anchors": [
+      {
+        "trust_kind": "manifest",
+        "trust_anchors": "<PEM trust anchors>",
+        "allowed_list": "<explicitly trusted signing certificates in PEM>"
+      }
+    ]
+  },
+  "verify": { "verify_trust": true }
+}
+```
+
+For local sample tests, explicitly allow only the existing development fixture certificate using the `trust --allowed_list sample/es256_certs.pem` options. This is test-local trust, not a publicly trusted production credential, and does not disable signature verification.
 
 Enable trust support by using the `trust` subcommand, as follows:
 
