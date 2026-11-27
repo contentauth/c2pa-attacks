@@ -17,11 +17,11 @@ There are some combinations that the script does not build. For instance, the `C
 | `-o` | The output directory for the newly created files. Default: `./sample_out/` |
 | `-r` | The JSON manifest file for `regex` substitutions. Default: `./sample/cawg_author_regex.json` |
 | `-s` | The location of the source image file that will be altered. Default: `./sample/image.jpg` |
-| `-t` | The targeted manifest type. Allowed values are `all`, `standard`, and `regex`. Default: `regex` |
+| `-t` | The targeted manifest type. Allowed values are `all`, `standard`, and `regex`. Default: `all` |
 
-The default is template-first CAWG metadata testing. The `regex` mode uses a JSON template with `C2PA_ATTACK` at the desired string location. Change the template to test other metadata fields or schemas without adding flags. Use `-r ./sample/cawg_person_identifier_regex.json` for identifiers or a custom template for Dublin Core metadata.
+The default `all` mode tests claim fields such as title, CAWG metadata, retained legacy CreativeWork targets, and template substitutions. CAWG support adds to the tool's broader C2PA manifest testing; it does not replace other targets. The `regex` mode uses a JSON template with `C2PA_ATTACK` at the desired string location. Change the template to test other assertion fields or schemas without adding flags. Use `-r ./sample/cawg_person_identifier_regex.json` for identifiers or a custom template for Dublin Core metadata.
 
-The opt-in `standard` and `all` modes include `cawg_author`, `cawg_person_identifier`, claim-field targets, and the retained legacy `author`/`person_identifier` targets. The latter deliberately create CreativeWork assertions and print warnings; use a claim-v1 definition such as `sample/test.json` for legacy-specific testing. `all` also includes template batches. `-m` selects the definition used for non-template batches.
+The `standard` and default `all` modes include `cawg_author`, `cawg_person_identifier`, claim-field targets, and the retained legacy `author`/`person_identifier` targets. The latter deliberately create CreativeWork assertions and print warnings; use a claim-v1 definition such as `sample/test.json` for legacy-specific testing. `all` also includes template batches. `-m` selects the definition used for non-template batches.
 
 For a custom template:
 

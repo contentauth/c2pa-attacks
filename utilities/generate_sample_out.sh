@@ -68,7 +68,7 @@ output_name="signed_image.jpg"
 source_image="./sample/image.jpg"
 
 # targets
-build_target="regex"
+build_target="all"
 
 # Display usage information when an unexpected or malformed flag is provided.
 usage() {

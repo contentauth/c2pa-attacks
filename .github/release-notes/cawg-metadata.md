@@ -7,7 +7,7 @@
 - Keep `author` and `person_identifier` as explicit legacy CreativeWork tests with unchanged assertion fields and filename prefixes; do not silently convert existing jobs.
 - Prefer `-t regex` with ordinary JSON manifest templates for additional CAWG metadata fields and alternative schemas such as Dublin Core. Support mutually exclusive `-m/--manifest` or `-c/--config`.
 - Preserve literal dollar signs, quotes, backslashes, and JSON-escaped control characters in template payloads. Report batch failures through an unsuccessful exit status.
-- Add CAWG samples and signed-asset regression tests to the existing pull-request unit suite; make sample generation template-first.
+- Add CAWG samples and signed-asset regression tests to the existing pull-request unit suite; retain `all` as the sample-generation default, covering claim fields, CAWG metadata, legacy targets, and templates.
 - This release covers CAWG metadata, not separately signed CAWG Identity assertions or credential-holder proof.
 - Metadata is protected by the enclosing C2PA manifest signature, including with the sample ES256 test keys. CAWG Identity creation is planned separately after this metadata change is finalized and merged, not as part of 0.2.0.
 
