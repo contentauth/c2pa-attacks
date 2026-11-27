@@ -26,7 +26,7 @@ The following table describes the command-line options.
 
 | CLI&nbsp;option&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Short version | Argument | Description |
 |-----|----|----|----|
-| `--target` | `-t` | `<target>` | One of: `title`, `cawg_author`, `cawg_person_identifier`, `author`, `claim_generator`, `person_identifier`, `vendor`, `label`, `instance_id`, `format`, or `regex`. Prefer `regex` templates for broader CAWG coverage. |
+| `--target` | `-t` | `<target>` | One of: `title`, `cawg_author`, `cawg_person_identifier`, `author`, `claim_generator`, `person_identifier`, `vendor`, `label`, `instance_id`, `format`, or `regex`. Prefer `regex` templates for broader CAWG and C2PA assertion coverage. |
 | `--attack_file` | `-a` | `<attack_file>` | Specifies the file with the list of injections. See [Creating attack files](#creating-attack-files). |
 | `--config` | `-c` | `<config>` | Manifest definition as a JSON string; mutually exclusive with `--manifest`. |
 | `--manifest` | `-m` | `<manifest_file>` | Manifest definition file; provide exactly one of this or `--config`. |

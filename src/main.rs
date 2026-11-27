@@ -996,6 +996,12 @@ fn main() -> Result<ExitCode> {
         .to_possible_value()
         .context("Missing target name")?;
     let field_type = target_value.get_name().to_owned();
+    if args.target == Target::Label {
+        eprintln!(
+            "WARNING: The label target requires a valid GUID format. \
+             Arbitrary strings are rejected by the SDK."
+        );
+    }
     if matches!(args.target, Target::Author | Target::PersonIdentifier) {
         eprintln!(
             "WARNING: {field_type} creates deprecated CreativeWork metadata. Use \
