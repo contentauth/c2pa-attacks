@@ -27,7 +27,7 @@ For a custom template:
 
 `./utilities/generate_sample_out.sh -t regex -r {location_of_your_regex_manifest} {location_of_the_c2pa-attacks_binary}`
 
-The binary argument must be an executable file path (for example `./target/debug/c2pa-attacks` or `~/.cargo/bin/c2pa-attacks`). Arguments are passed literally, so file paths with spaces are supported; the script does not evaluate a shell command string. A failed batch is reported and other batches are still attempted, then the script exits unsuccessfully. Some attack strings intentionally violate SDK validation rules; those failures are not silently treated as successes.
+The binary argument must be an executable file path (for example `./target/debug/c2pa-attacks` or `~/.cargo/bin/c2pa-attacks`). Arguments are passed literally, so file paths with spaces are supported; the script does not evaluate a shell command string. Some attack strings intentionally violate SDK validation rules. Those rejections are reported, and a completed run exits zero even when some payloads cannot produce assets. Setup or execution failures still produce a nonzero exit status after other batches have been attempted. The script recognizes the CLI's dedicated exit status `3` for known attack rejections; it does not ignore arbitrary failures.
 
 Anonther example customization of the command line might be to use the malicious certificate manifest definition which will sign the files with the default malicious certificate. Assuming that a locally installed c2pa-attacks binary will be used, the commmand would be as follows:
 

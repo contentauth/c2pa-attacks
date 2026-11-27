@@ -125,7 +125,7 @@ c2pa-attacks sample/image.jpg \
   -a attacks/xss.attack -o sample_out/legacy.jpg
 ```
 
-The legacy `person_identifier` target continues to inject into `identifier`, `@id`, and `creator`. New CAWG identifier presets target only `schema:identifier`; use templates for alternate locations. Output filename prefixes distinguish `cawg_author`, `cawg_person_identifier`, and legacy targets. If any payload fails, the batch continues but exits unsuccessfully, reporting the failures.
+The legacy `person_identifier` target continues to inject into `identifier`, `@id`, and `creator`. New CAWG identifier presets target only `schema:identifier`; use templates for alternate locations. Output filename prefixes distinguish `cawg_author`, `cawg_person_identifier`, and legacy targets. The CLI attempts all payloads and reports failures: exit status `3` identifies known SDK rejections of malicious label/vendor values, while setup or execution failures remain unsuccessful with status `1` (argument errors use status `2`). Unreadable vendor outputs caused by injected NUL characters are removed. The sample-generation utility reports status-`3` rejections without failing the completed run; it still fails for genuine execution errors.
 
 ## Creating attack files
 

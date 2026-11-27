@@ -20,6 +20,7 @@ use std::{
     fs::{create_dir_all, remove_file, File},
     io::{self, BufRead},
     path::{Path, PathBuf},
+    process::ExitCode,
     str::FromStr,
     sync::Arc,
 };
@@ -55,6 +56,48 @@ const SIDECAR_TRUST_STORE_CFG: &str = "c2pa-trust-store.cfg";
 const SIDECAR_TRUST_ALLOWED: &str = "c2pa-trust-allowed.sha256.txt";
 const LEGACY_CREATIVE_WORK: &str = "stds.schema-org.CreativeWork";
 const SCHEMA_NAMESPACE: &str = "https://schema.org/";
+const ATTACK_REJECTED_EXIT_CODE: u8 = 3;
+
+#[derive(Debug)]
+struct AttackRejected(Error);
+
+impl std::fmt::Display for AttackRejected {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "attack rejected by SDK: {}", self.0)
+    }
+}
+
+impl std::error::Error for AttackRejected {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+fn signing_error(error: Error, target: Target) -> anyhow::Error {
+    let rejected = match (&error, target) {
+        (Error::BadParam(message), Target::Label) => message == "invalid Claim GUID",
+        (Error::ClaimEncoding, Target::Vendor) => true,
+        (Error::InvalidManifest(validation), Target::Vendor) => {
+            validation.active_manifest().is_some_and(|statuses| {
+                !statuses.failure().is_empty()
+                    && statuses.failure().iter().all(|status| {
+                        status.code() == "claim.malformed"
+                            && status.explanation() == Some("claim box label invalid")
+                    })
+            }) && validation.ingredient_deltas().is_none_or(|ingredients| {
+                ingredients
+                    .iter()
+                    .all(|ingredient| ingredient.validation_deltas().failure().is_empty())
+            })
+        }
+        _ => false,
+    };
+    if rejected {
+        AttackRejected(error).into()
+    } else {
+        error.into()
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 #[value(rename_all = "snake_case")]
@@ -734,13 +777,23 @@ fn output_file(
             if output.exists() {
                 remove_file(&output).context("removing partial signed output")?;
             }
-            return Err(error).context("signing file");
+            return Err(signing_error(error, args.target)).context("signing file");
         }
 
         // generate a report on the output file
-        let reader = Reader::from_shared_context(builder.context())
-            .with_file(&output)
-            .map_err(special_errs)?;
+        let reader = match Reader::from_shared_context(builder.context()).with_file(&output) {
+            Ok(reader) => reader,
+            Err(error) => {
+                if args.target == Target::Vendor
+                    && mal_string.contains('\0')
+                    && matches!(&error, Error::JumbfParseError(parse) if parse.to_string() == "unexpected end of file")
+                {
+                    remove_file(&output).context("removing unreadable vendor attack output")?;
+                    return Err(AttackRejected(error)).context("reading signed vendor attack");
+                }
+                return Err(special_errs(error));
+            }
+        };
         if args.verbose {
             if args.detailed {
                 println!("{reader:#?}");
@@ -932,7 +985,7 @@ fn create_file(
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<ExitCode> {
     let args = CliArgs::parse();
 
     // set RUST_LOG=debug to get detailed debug logging
@@ -964,6 +1017,7 @@ fn main() -> Result<()> {
     if let Ok(lines) = read_lines(args.attack_file.clone()) {
         // Consumes the iterator, returns an (Optional) String
         let mut failures = 0;
+        let mut rejected = 0;
         for mal_string in lines {
             let mal_string = mal_string.context("reading attack string")?;
             let result = create_file(
@@ -979,7 +1033,11 @@ fn main() -> Result<()> {
                 Err(e) => {
                     eprintln!("Failed to create file: {loop_index}");
                     eprintln!("Failed due to error: {e:?}");
-                    failures += 1;
+                    if e.downcast_ref::<AttackRejected>().is_some() {
+                        rejected += 1;
+                    } else {
+                        failures += 1;
+                    }
                     loop_index += 1;
                 }
             }
@@ -987,11 +1045,15 @@ fn main() -> Result<()> {
         if failures > 0 {
             bail!("Failed to create {failures} attack file(s)");
         }
+        if rejected > 0 {
+            eprintln!("SDK rejected {rejected} attack payload(s); all payloads were attempted");
+            return Ok(ExitCode::from(ATTACK_REJECTED_EXIT_CODE));
+        }
     } else {
         bail!("ERROR: Could not find the attack injection file!");
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 #[cfg(test)]
@@ -1416,6 +1478,112 @@ pub mod tests {
             .iter()
             .all(|anchor| anchor.trust_kind == c2pa::settings::TrustListKind::Manifest));
         C2paContext::new().with_settings(&loaded).unwrap();
+    }
+
+    #[test]
+    fn test_signing_rejection_classification_preserves_real_errors() {
+        assert!(signing_error(
+            Error::BadParam("invalid Claim GUID".to_owned()),
+            Target::Label
+        )
+        .downcast_ref::<AttackRejected>()
+        .is_some());
+        for (error, target) in [
+            (
+                Error::BadParam("invalid Claim GUID".to_owned()),
+                Target::Title,
+            ),
+            (
+                Error::BadParam("invalid signing configuration".to_owned()),
+                Target::Label,
+            ),
+            (Error::ClaimEncoding, Target::Title),
+            (
+                Error::IoError(io::Error::from(io::ErrorKind::PermissionDenied)),
+                Target::Vendor,
+            ),
+        ] {
+            assert!(signing_error(error, target)
+                .downcast_ref::<AttackRejected>()
+                .is_none());
+        }
+        for extra_failure in [None, Some("assertion.action.malformed")] {
+            let mut failures = vec![json!({
+                "code": "claim.malformed",
+                "explanation": "claim box label invalid"
+            })];
+            if let Some(code) = extra_failure {
+                failures.push(json!({"code": code}));
+            }
+            let validation = serde_json::from_value(json!({
+                "activeManifest": {"success": [], "informational": [], "failure": failures}
+            }))
+            .unwrap();
+            let error = signing_error(Error::InvalidManifest(Box::new(validation)), Target::Vendor);
+            assert_eq!(
+                error.downcast_ref::<AttackRejected>().is_some(),
+                extra_failure.is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn test_sdk_rejected_payloads_remove_outputs_but_missing_input_is_fatal() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut args = cli_args(&["-m", "sample/cawg_metadata.json", "-t", "label"]).unwrap();
+        args.settings = temp.path().join("settings.json");
+        fs::write(
+            &args.settings,
+            json!({
+                "trust": {"anchors": [{
+                    "trust_anchors": "",
+                    "trust_kind": "manifest",
+                    "allowed_list": include_str!("../sample/es256_certs.pem")
+                }]},
+                "verify": {"verify_trust": true}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        args.output = Some(temp.path().join("output.jpg"));
+        for (target, field, payload) in [
+            (Target::Label, "label", "not-a-guid"),
+            (Target::Vendor, "vendor", "Injected\0Null"),
+        ] {
+            args.target = target;
+            let mut index = 0;
+            let error = create_file(
+                field.to_owned(),
+                &mut index,
+                payload.to_owned(),
+                &args,
+                false,
+            )
+            .unwrap_err();
+            assert!(
+                error.downcast_ref::<AttackRejected>().is_some(),
+                "{error:#}; SDK variant: {:?}",
+                error.downcast_ref::<Error>()
+            );
+            assert!(!temp
+                .path()
+                .join(create_output_file_name(&args, field.to_owned(), &0))
+                .exists());
+        }
+        args.target = Target::Vendor;
+        args.path = temp.path().join("missing.jpg");
+        let error = create_file(
+            "vendor".to_owned(),
+            &mut 0,
+            "payload".to_owned(),
+            &args,
+            false,
+        )
+        .unwrap_err();
+        assert!(
+            error.downcast_ref::<AttackRejected>().is_none(),
+            "{error:#}"
+        );
     }
 
     #[test]

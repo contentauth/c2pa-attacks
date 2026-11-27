@@ -167,6 +167,7 @@ fi
 
 # For each of the listed attack files
 failures=0
+rejected_batches=0
 for attack_file in "${attack_files[@]}"; do
 
     ## For each of the target substitution locations
@@ -209,13 +210,21 @@ for attack_file in "${attack_files[@]}"; do
                 printf '%s\n' "$output"
             fi
         else
-            printf 'Failed target %s with %s:\n%s\n' "$target_field" "$attack_file" "$output" >&2
-            failures=$((failures + 1))
+            status=$?
+            if [ "$status" -eq 3 ]; then
+                printf 'SDK rejected attack payloads for target %s with %s.\n' "$target_field" "$attack_file" >&2
+                rejected_batches=$((rejected_batches + 1))
+            else
+                printf 'Failed target %s with %s (exit %s):\n%s\n' "$target_field" "$attack_file" "$status" "$output" >&2
+                failures=$((failures + 1))
+            fi
         fi
 
     done
 
 done
+
+printf 'Sample generation completed: %s batch(es) contained SDK-rejected attack payloads; %s execution failure(s).\n' "$rejected_batches" "$failures"
 
 if [ "$failures" -gt 0 ]; then
     printf '%s batch(es) failed; other batches were still attempted.\n' "$failures" >&2
