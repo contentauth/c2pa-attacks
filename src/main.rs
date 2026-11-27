@@ -144,6 +144,8 @@ enum Commands {
     author,
     version,
     about = "A tool that can create C2PA manifests for the purposes of security testing.",
+    after_help = "CAWG support covers metadata assertions protected by the C2PA manifest signature. \
+                  Creating separately signed CAWG Identity assertions is not supported.",
     arg_required_else_help = true
 )]
 struct CliArgs {
@@ -1050,6 +1052,9 @@ pub mod tests {
             assert!(cli_args(&["-m", "test.json", "-t", legacy]).is_ok());
         }
         let help = CliArgs::command().render_long_help().to_string();
+        assert!(
+            help.contains("Creating separately signed CAWG Identity assertions is not supported.")
+        );
         for name in [
             "--target",
             "--manifest",

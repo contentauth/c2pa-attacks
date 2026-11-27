@@ -9,5 +9,6 @@
 - Preserve literal dollar signs, quotes, backslashes, and JSON-escaped control characters in template payloads. Report batch failures through an unsuccessful exit status.
 - Add CAWG samples and signed-asset regression tests to the existing pull-request unit suite; make sample generation template-first.
 - This release covers CAWG metadata, not separately signed CAWG Identity assertions or credential-holder proof.
+- Metadata is protected by the enclosing C2PA manifest signature, including with the sample ES256 test keys. CAWG Identity creation is planned separately after this metadata change is finalized and merged, not as part of 0.2.0.
 
 Release as 0.2.0 from the latest 0.1.x release (currently 0.1.6) using the existing semantic-version automation. The PR/squash title must include `(MINOR)` so the marker is present in the commit history. Version and CHANGELOG.md remain release-generated; these pending notes are consumed by the release workflow. Merging this PR prepares the release; publishing still requires the existing manual release-workflow dispatch.

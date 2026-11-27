@@ -37,6 +37,8 @@ NOTE: This tool is based on the [c2pa-rs SDK](https://github.com/contentauth/c2p
 
 **CAWG metadata migration (planned 0.2.0 release):** SDK 0.92.2 compatibility adds `cawg_author` and `cawg_person_identifier` targets using Schema.org JSON-LD in `cawg.metadata`. Prefer JSON templates with `-t regex` for broader metadata coverage, including future Dublin Core layouts. Existing `author` and `person_identifier` targets retain legacy CreativeWork behavior and print a warning. This does not implement separately signed CAWG Identity assertions. See [CAWG metadata and legacy testing](docs/usage.md#cawg-metadata-and-legacy-testing).
 
+CAWG metadata assertions are protected by the enclosing C2PA manifest's signature, including when using the sample test keys. This is not a separate CAWG Identity signature and does not prove the author's identity. CAWG Identity assertion creation is planned as follow-up work after this metadata release change is finalized and merged; it is not part of 0.2.0.
+
 Dependency updates are proposed daily by Dependabot. The checked-in `Cargo.lock` records reviewed dependency versions; use `cargo install --locked c2pa-attacks` for a published release's locked graph. Existing binaries and locked installations do not update themselves: install a new release or rebuild after an approved dependency update. No repository file can guarantee that every installed copy always uses the latest root-certificate bundle.
 
 ## Installation

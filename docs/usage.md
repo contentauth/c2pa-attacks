@@ -78,6 +78,8 @@ SDK 0.92.2 no longer exports the legacy `CREATIVE_WORK` label constant. The tool
 
 For current metadata tests, use [CAWG Metadata 1.1](https://cawg.io/metadata/1.1/#_assertion_definition): the assertion label is `cawg.metadata`, its content is JSON, and its `@context` maps schema prefixes to namespaces. This is **metadata testing, not signed CAWG Identity testing**; an author name or identifier does not prove control over an identity.
 
+The metadata assertion is cryptographically protected by the enclosing C2PA manifest signature. The samples use development ES256 keys for that signature; they do not create a separate CAWG Identity signature. Creating CAWG Identity assertions is not supported in this release, including through template mode. That credential/signature workflow is planned as follow-up work after the metadata changes are finalized and merged.
+
 ### Template-first configuration
 
 As in c2patool, the ordinary SDK manifest definition configures the job: assertion data, schemas, ingredients, claim version, and development signing configuration. Use `-m/--manifest` for a file or `-c/--config` for inline JSON, never both. Resource paths in files resolve relative to the manifest file; inline resource paths resolve relative to the current directory. The tool adds attack substitution and one output per payload to the SDK Builder/signing workflow, not a separate CAWG configuration format.
