@@ -42,12 +42,25 @@ jobs:
         minor_pattern: "(MINOR)"
 
     - name: Generate changelog since last tag
-      uses: mathiasvr/command-output@v1
-        ## NEEDS UPDATE for set-output deprecation.
-        ## See https://github.com/mathiasvr/command-output/issues/4.
       id: generate-changelog
-      with:
-        run: echo blah blah blah
+      shell: bash
+      env:
+        LATEST_TAG: ${{ steps.get-latest-tag.outputs.tag }}
+      run: |
+        set -euo pipefail
+        delimiter="$(openssl rand -hex 16)"
+        {
+          echo "stdout<<$delimiter"
+          for note in .github/release-notes/*.md; do
+            if [ -f "$note" ]; then
+              cat "$note"
+              printf '\n'
+            fi
+          done
+          git --no-pager log --format='- %s%n%b' "$LATEST_TAG..HEAD" |
+            sed -E 's_\(#([0-9]+)\)_([#\1](https://github.com/contentauth/c2pa-attacks/pull/\1)\)_g'
+          echo "$delimiter"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Log version & changelog
       run: |
@@ -70,8 +83,13 @@ jobs:
 
     - name: Update changelog
       run: |
-        (head -8 CHANGELOG.md && echo "## $VERSION" && date "+_%d %B %Y_" && echo "" && (echo "$CHANGELOG" | sed -E 's_\(#([0-9]+)\)_([#\1](https://github.com/contentauth/c2pa-rs/pull/\1)\)_') && tail -n +9 CHANGELOG.md) > CHANGELOG.new.md
+        (head -8 CHANGELOG.md && echo "## $VERSION" && date "+_%d %B %Y_" && echo "" && printf '%s\n\n' "$CHANGELOG" && tail -n +9 CHANGELOG.md) > CHANGELOG.new.md
         mv CHANGELOG.new.md CHANGELOG.md
+        for note in .github/release-notes/*.md; do
+          if [ -f "$note" ]; then
+            rm -- "$note"
+          fi
+        done
       env:
         VERSION: ${{ steps.set-version.outputs.version }}
         CHANGELOG: ${{ steps.generate-changelog.outputs.stdout }}

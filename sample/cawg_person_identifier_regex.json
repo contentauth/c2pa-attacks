@@ -1,0 +1,33 @@
+{
+    "claim_version": 2,
+    "alg": "es256",
+    "private_key": "es256_private.key",
+    "sign_cert": "es256_certs.pem",
+    "claim_generator_info": [{ "name": "C2PA Attacks" }],
+    "title": "CAWG person identifier template",
+    "assertions": [
+        {
+            "label": "c2pa.actions.v2",
+            "data": {
+                "actions": [{
+                    "action": "c2pa.created",
+                    "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/computationalCapture"
+                }]
+            }
+        },
+        {
+            "label": "cawg.metadata",
+            "kind": "Json",
+            "data": {
+                "@context": { "schema": "https://schema.org/" },
+                "schema:author": [
+                    {
+                        "@type": "schema:Person",
+                        "schema:name": "Content Creator",
+                        "schema:identifier": "C2PA_ATTACK"
+                    }
+                ]
+            }
+        }
+    ]
+}

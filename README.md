@@ -35,11 +35,17 @@ NOTE: This tool is a modification of the open-source C2PA [c2patool](https://git
 
 NOTE: This tool is based on the [c2pa-rs SDK](https://github.com/contentauth/c2pa-rs/). As c2pa-rs matures, it occasionally deprecates certain functionality in order to keep current with the C2PA specification. As a result, this tool occasionally has to remove or alter functionality as the c2pa-rs library is updated. If you are targeting older versions of the specification, then you may want to try testing with older releases. 
 
+**CAWG metadata migration (planned 0.2.0 release):** SDK 0.92.2 compatibility adds `cawg_author` and `cawg_person_identifier` targets using Schema.org JSON-LD in `cawg.metadata`. Prefer JSON templates with `-t regex` for broader metadata coverage, including future Dublin Core layouts. Existing `author` and `person_identifier` targets retain legacy CreativeWork behavior and print a warning. This does not implement separately signed CAWG Identity assertions. See [CAWG metadata and legacy testing](docs/usage.md#cawg-metadata-and-legacy-testing).
+
+CAWG metadata assertions are protected by the enclosing C2PA manifest's signature, including when using the sample test keys. This is not a separate CAWG Identity signature and does not prove the author's identity. CAWG Identity assertion creation is planned as follow-up work after this metadata release change is finalized and merged; it is not part of 0.2.0.
+
+Dependency updates are proposed daily by Dependabot. The checked-in `Cargo.lock` records reviewed dependency versions; use `cargo install --locked c2pa-attacks` for a published release's locked graph. Existing binaries and locked installations do not update themselves: install a new release or rebuild after an approved dependency update. No repository file can guarantee that every installed copy always uses the latest root-certificate bundle.
+
 ## Installation
 
 ### Prerequisites
 
-Install [Rust](https://www.rust-lang.org/tools/install). 
+Install the latest stable [Rust](https://www.rust-lang.org/tools/install); SDK 0.92.2 requires Rust 1.96 or newer.
 
 To use the tool, you also must have certificates for signing the content. 
 
@@ -88,6 +94,17 @@ The `sample` directory contains
 
 - `malicious_certificate.key` and `malicious_certificate.pem` - A certificate / key pair with random characters in the common name, organization, and organizational unit fields for testing a certificate parser's capability to handle unexpected characters. These are from a self-signed CA, so they will not work on an environment that enforces a trusted CA list.
 - `malicious_certificate.json` - A manifest that is the same as `test.json` except that it specifies to use the malicious certificates for signing.
+- `cawg_metadata.json` - Claim-v2 Schema.org metadata for the two CAWG convenience targets.
+- `cawg_author_regex.json` and `cawg_person_identifier_regex.json` - CAWG templates with a marker at the intended author or identifier location.
+
+For example:
+
+```shell
+c2pa-attacks sample/image.jpg -m sample/cawg_author_regex.json \
+  -t regex -a attacks/xss.attack -o sample_out/cawg.jpg
+```
+
+The existing CreativeWork samples remain available for explicit legacy regression testing.
 
 ## Supported file formats
 
