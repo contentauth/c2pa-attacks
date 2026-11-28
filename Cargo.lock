@@ -423,9 +423,9 @@ checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "c2pa"
-version = "0.91.11"
+version = "0.92.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8e2a752d002206ccd431a9fe22cdc1205023d316c118dd60c4bf568cd493dea"
+checksum = "b2e0515be937264bf66d25269db4c6d89703e033ac5314e7613bc4de955284e2"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -441,7 +441,6 @@ dependencies = [
  "c2pa_raw_crypto",
  "chrono",
  "console_log",
- "const-hex",
  "coset",
  "der 0.8.2",
  "ed25519-dalek",
@@ -486,7 +485,6 @@ dependencies = [
  "serde-transcode",
  "serde-wasm-bindgen",
  "serde_bytes",
- "serde_derive",
  "serde_json",
  "serde_with",
  "sha1",
@@ -4072,9 +4070,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.7"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f31141ce3fc3e300ae89b78c0dd67f9708061d1d2eda54b8209346fd6be9a92c"
+checksum = "293198dcebfb821155b5092ab94b5a82ff180eddd7241df3bd6e66a4ffd1a585"
 dependencies = [
  "rustls-pki-types",
 ]
